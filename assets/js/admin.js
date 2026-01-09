@@ -839,24 +839,23 @@ jQuery(function ($) {
          */
         saveSettings: function() {
             var apiUrl = $('#kolibri24-api-url').val();
+            var importId = $('#kolibri24-wp-all-import-id').val();
             var nonce = $('#kolibri24-save-settings-btn').data('nonce');
             var statusDiv = $('#kolibri24-settings-status');
-            
-            console.log('Save settings called', { apiUrl, nonce });
-            
+
             // Clear previous messages
             statusDiv.empty();
-            
+
             // Validate URL
             if (!apiUrl) {
                 statusDiv.html('<div class="notice notice-error is-dismissible"><p>Please enter a valid URL</p></div>');
                 return;
             }
-            
+
             // Show loading state
             $('#kolibri24-save-settings-btn').prop('disabled', true);
             statusDiv.html('<div class="notice notice-info"><p>Saving settings...</p></div>');
-            
+
             // Make AJAX request
             $.ajax({
                 url: kolibri24Ajax.ajaxUrl,
@@ -864,10 +863,10 @@ jQuery(function ($) {
                 data: {
                     action: 'kolibri24_save_settings',
                     nonce: nonce,
-                    kolibri24_api_url: apiUrl
+                    kolibri24_api_url: apiUrl,
+                    kolibri24_wp_all_import_id: importId
                 },
                 success: function(response) {
-                    console.log('Settings save response:', response);
                     if (response.success) {
                         statusDiv.html('<div class="notice notice-success is-dismissible"><p>' + response.data.message + '</p></div>');
                     } else {
@@ -875,7 +874,6 @@ jQuery(function ($) {
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.log('Settings save error:', { xhr, status, error });
                     statusDiv.html('<div class="notice notice-error is-dismissible"><p>An error occurred while saving settings</p></div>');
                 },
                 complete: function() {
