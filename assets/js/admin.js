@@ -294,7 +294,7 @@ jQuery(function ($) {
                     }, 1000);
                 }
             });
-        }
+        },
 
         /**
          * Handle successful download/extract
@@ -853,3 +853,4 @@ jQuery(function ($) {
         e.preventDefault();
         Kolibri24SettingsManager.saveSettings();
     });
+});
