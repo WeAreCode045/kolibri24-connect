@@ -716,9 +716,10 @@ public function get_archives() {
 		if ( ! empty( $merged_file_path ) && file_exists( $merged_file_path ) ) {
 			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
 			$xml_processor = new Kolibri24_Connect_Xml_Processor();
+			$filesystem   = $xml_processor->get_filesystem();
 
 			// Read the merged XML file.
-			$xml_content = $xml_processor->filesystem->get_contents( $merged_file_path );
+			$xml_content = $filesystem ? $filesystem->get_contents( $merged_file_path ) : false;
 
 			if ( $xml_content ) {
 				// Parse XML.

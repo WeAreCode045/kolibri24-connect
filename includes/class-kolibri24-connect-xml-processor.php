@@ -53,6 +53,15 @@ if ( ! class_exists( 'Kolibri24_Connect_Xml_Processor' ) ) {
 		}
 
 		/**
+		 * Accessor for WP_Filesystem instance
+		 *
+		 * @return WP_Filesystem_Base|null
+		 */
+		public function get_filesystem() {
+			return $this->filesystem;
+		}
+
+		/**
 		 * Extract ZIP file
 		 *
 		 * @param string $zip_file_path Path to ZIP file.
