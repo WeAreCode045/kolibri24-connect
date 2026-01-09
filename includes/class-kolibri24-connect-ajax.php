@@ -584,7 +584,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			}
 			
 			// Execute WP-CLI command to run the import.
-			   $command = sprintf( 'cd /code && wp all-import run %d --force-run --allow-root', $import_id );
+			   $command = sprintf( 'wp all-import run %d --force-run --allow-root', $import_id );
 			
 			// Check if WP_CLI is available (for direct execution).
 			   if ( class_exists( 'WP_CLI' ) ) {
