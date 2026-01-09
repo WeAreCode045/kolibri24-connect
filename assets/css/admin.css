@@ -23,7 +23,7 @@
 
 /* Card width helpers */
 .kolibri24-card-narrow {
-    max-width: 800px;
+    max-width: 90%;
 }
 
 .kolibri24-card-full {
