@@ -107,6 +107,16 @@ if ( ! class_exists( 'Kolibri24_Connect_Xml_Processor' ) ) {
 		}
 
 		/**
+		 * Get all XML files from a directory (public wrapper)
+		 *
+		 * @param string $directory Directory to search.
+		 * @return array Array of XML file paths.
+		 */
+		public function get_xml_files_from_directory( $directory ) {
+			return $this->find_xml_files( $directory );
+		}
+
+		/**
 		 * Find all XML files in a directory (recursive)
 		 *
 		 * @param string $directory Directory to search.

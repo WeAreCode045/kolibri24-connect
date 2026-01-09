@@ -322,14 +322,35 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				);
 			}
 			
-			// Get property previews from this archive.
+			// Find XML files in the archive directory.
 			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
 			$xml_processor = new Kolibri24_Connect_Xml_Processor();
-			$previews = $xml_processor->extract_property_previews( $archive_path );
+			
+			// Get all XML files from the archive directory.
+			$xml_files = $xml_processor->get_xml_files_from_directory( $archive_path );
+			
+			if ( empty( $xml_files ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'No XML files found in this archive.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Get property previews from XML files.
+			$preview_result = $xml_processor->extract_property_previews( $xml_files );
+			
+			if ( ! isset( $preview_result['success'] ) || ! $preview_result['success'] ) {
+				wp_send_json_error(
+					array(
+						'message' => $preview_result['message'] ?? __( 'Failed to extract properties from archive.', 'kolibri24-connect' ),
+					)
+				);
+			}
 			
 			wp_send_json_success(
 				array(
-					'properties' => $previews,
+					'properties' => $preview_result['properties'],
 					'archive_name' => basename( $archive_path ),
 				)
 			);
