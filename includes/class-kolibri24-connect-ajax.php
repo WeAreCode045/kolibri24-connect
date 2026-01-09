@@ -21,69 +21,69 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		public function __construct() {
 			// AJAX handler for WP All Import trigger/process URLs.
 			add_action( 'wp_ajax_kolibri24_run_all_import_urls', array( $this, 'run_all_import_urls' ) );
-					/**
-					 * AJAX handler to trigger WP All Import via trigger and processing URLs.
-					 */
-					public function run_all_import_urls() {
-						// Security: Nonce and capability check
-						if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
-							wp_send_json_error( array( 'message' => __( 'Security verification failed.', 'kolibri24-connect' ) ) );
-						}
-						if ( ! current_user_can( 'manage_options' ) ) {
-							wp_send_json_error( array( 'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ) ) );
-						}
+		
+		// AJAX handler for downloading and extracting properties.
+		add_action( 'wp_ajax_kolibri24_download_extract', array( $this, 'download_and_extract' ) );
+		
+		// AJAX handler for merging selected properties.
+		add_action( 'wp_ajax_kolibri24_merge_properties', array( $this, 'merge_selected_properties' ) );
+		
+		// AJAX handler for getting archived directories.
+		add_action( 'wp_ajax_kolibri24_get_archives', array( $this, 'get_archives' ) );
+		
+		// AJAX handler for viewing archive preview.
+		add_action( 'wp_ajax_kolibri24_view_archive', array( $this, 'view_archive' ) );
+		
+		// AJAX handler for deleting an archive.
+		add_action( 'wp_ajax_kolibri24_delete_archive', array( $this, 'delete_archive' ) );
+		
+		// AJAX handler for saving settings.
+		add_action( 'wp_ajax_kolibri24_save_settings', array( $this, 'save_settings' ) );
+		
+		
+		// AJAX handler for downloading archive media.
+		add_action( 'wp_ajax_kolibri24_download_archive_media', array( $this, 'download_archive_media' ) );
+	}
 
-						$trigger_url    = get_option( 'kolibri24_trigger_url' );
-						$processing_url = get_option( 'kolibri24_processing_url' );
-
-						if ( empty( $trigger_url ) || empty( $processing_url ) ) {
-							wp_send_json_error( array( 'message' => __( 'Trigger or processing URL not configured.', 'kolibri24-connect' ) ) );
-						}
-
-						// Call trigger URL first
-						$trigger_response = wp_remote_get( $trigger_url, array( 'timeout' => 60 ) );
-						if ( is_wp_error( $trigger_response ) ) {
-							wp_send_json_error( array( 'message' => __( 'Failed to call trigger URL.', 'kolibri24-connect' ), 'error' => $trigger_response->get_error_message() ) );
-						}
-
-						// Call processing URL once (the JS will repeat every 2 minutes until import is finished)
-						$processing_response = wp_remote_get( $processing_url, array( 'timeout' => 60 ) );
-						if ( is_wp_error( $processing_response ) ) {
-							wp_send_json_error( array( 'message' => __( 'Failed to call processing URL.', 'kolibri24-connect' ), 'error' => $processing_response->get_error_message() ) );
-						}
-
-						$body = wp_remote_retrieve_body( $processing_response );
-						// Optionally, parse $body for completion status if needed
-						wp_send_json_success( array( 'message' => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ), 'processing_response' => $body ) );
-					}
-			// AJAX handler for downloading and extracting properties.
-			add_action( 'wp_ajax_kolibri24_download_extract', array( $this, 'download_and_extract' ) );
-			
-			// AJAX handler for merging selected properties.
-			add_action( 'wp_ajax_kolibri24_merge_properties', array( $this, 'merge_selected_properties' ) );
-			
-			// AJAX handler for getting archived directories.
-			add_action( 'wp_ajax_kolibri24_get_archives', array( $this, 'get_archives' ) );
-			
-			// AJAX handler for viewing archive preview.
-			add_action( 'wp_ajax_kolibri24_view_archive', array( $this, 'view_archive' ) );
-			
-			// AJAX handler for deleting an archive.
-			add_action( 'wp_ajax_kolibri24_delete_archive', array( $this, 'delete_archive' ) );
-			
-			// AJAX handler for saving settings.
-			add_action( 'wp_ajax_kolibri24_save_settings', array( $this, 'save_settings' ) );
-			
-			
-			// AJAX handler for downloading archive media.
-			add_action( 'wp_ajax_kolibri24_download_archive_media', array( $this, 'download_archive_media' ) );
+	/**
+	 * AJAX handler to trigger WP All Import via trigger and processing URLs.
+	 *
+	 * @since 1.2.0
+	 */
+	public function run_all_import_urls() {
+		// Security: Nonce and capability check
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Security verification failed.', 'kolibri24-connect' ) ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ) ) );
 		}
 
-		/**
-		 * AJAX handler for downloading and extracting ZIP
-		 *
-		 * @since 1.0.0
-		 */
+		$trigger_url    = get_option( 'kolibri24_trigger_url' );
+		$processing_url = get_option( 'kolibri24_processing_url' );
+
+		if ( empty( $trigger_url ) || empty( $processing_url ) ) {
+			wp_send_json_error( array( 'message' => __( 'Trigger or processing URL not configured.', 'kolibri24-connect' ) ) );
+		}
+
+		// Call trigger URL first
+		$trigger_response = wp_remote_get( $trigger_url, array( 'timeout' => 60 ) );
+		if ( is_wp_error( $trigger_response ) ) {
+			wp_send_json_error( array( 'message' => __( 'Failed to call trigger URL.', 'kolibri24-connect' ), 'error' => $trigger_response->get_error_message() ) );
+		}
+
+		// Call processing URL once (the JS will repeat every 2 minutes until import is finished)
+		$processing_response = wp_remote_get( $processing_url, array( 'timeout' => 60 ) );
+		if ( is_wp_error( $processing_response ) ) {
+			wp_send_json_error( array( 'message' => __( 'Failed to call processing URL.', 'kolibri24-connect' ), 'error' => $processing_response->get_error_message() ) );
+		}
+
+		$body = wp_remote_retrieve_body( $processing_response );
+		// Optionally, parse $body for completion status if needed
+		wp_send_json_success( array( 'message' => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ), 'processing_response' => $body ) );
+		 
+		// AJAX handler for downloading and extracting ZIP
+		
 		public function download_and_extract() {
 			// Verify nonce.
 			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
