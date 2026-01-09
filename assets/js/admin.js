@@ -906,10 +906,10 @@ jQuery(function ($) {
         var nonce = btn.data('nonce');
         var statusSpan = $('#kolibri24-run-import-status');
 
-        // Show loading state
+        // Show loading state (no output yet)
         btn.prop('disabled', true).addClass('disabled');
         btn.find('.dashicons').removeClass('dashicons-update').addClass('dashicons-update spin');
-        statusSpan.html('<span class="notice notice-info"><p>' + kolibri24Ajax.strings.processing + '</p></span>');
+        statusSpan.html('<div class="notice notice-info"><p>' + kolibri24Ajax.strings.processing + '</p></div>');
 
         $.ajax({
             url: kolibri24Ajax.ajaxUrl,
