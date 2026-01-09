@@ -19,8 +19,6 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-// Load after-import hook for WP All Import
-require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/kolibri24-after-import-hook.php';
 
 // Define KOLIBRI24_CONNECT_PLUGIN_FILE.
 if ( ! defined( 'KOLIBRI24_CONNECT_PLUGIN_FILE' ) ) {
@@ -31,6 +29,9 @@ if ( ! defined( 'KOLIBRI24_CONNECT_PLUGIN_FILE' ) ) {
 if ( ! defined( 'KOLIBRI24_CONNECT_ABSPATH' ) ) {
 	define( 'KOLIBRI24_CONNECT_ABSPATH', dirname( __FILE__ ) . '/' );
 }
+
+// Load after-import hook for WP All Import
+require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/kolibri24-after-import-hook.php';
 
 // Include the main class.
 if ( ! class_exists( 'Kolibri24_Connect' ) ) {
