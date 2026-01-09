@@ -564,40 +564,26 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			if ( empty( $api_url ) ) {
 				wp_send_json_error(
 					array(
-						'message' => __( 'Please enter a valid URL.', 'kolibri24-connect' ),
-					)
-				);
-			}
-			
-			   // Get and validate trigger/processing URLs
-			   $trigger_url    = isset( $_POST['kolibri24_trigger_url'] ) ? esc_url_raw( wp_unslash( $_POST['kolibri24_trigger_url'] ) ) : '';
-			   $processing_url = isset( $_POST['kolibri24_processing_url'] ) ? esc_url_raw( wp_unslash( $_POST['kolibri24_processing_url'] ) ) : '';
-
-			   if ( empty( $trigger_url ) ) {
-				   wp_send_json_error( array( 'message' => __( 'Trigger URL is required.', 'kolibri24-connect' ) ) );
-			   }
-			   if ( empty( $processing_url ) ) {
-				   wp_send_json_error( array( 'message' => __( 'Processing URL is required.', 'kolibri24-connect' ) ) );
-			   }
-
-			   // Save the options.
-			   update_option( 'kolibri24_api_url', $api_url );
-			   update_option( 'kolibri24_trigger_url', $trigger_url );
-			   update_option( 'kolibri24_processing_url', $processing_url );
-			
-			wp_send_json_success(
-				array(
-					'message' => __( 'Settings saved successfully.', 'kolibri24-connect' ),
+					'message' => __( 'Please enter a valid API URL.', 'kolibri24-connect' ),
 				)
 			);
 		}
+		
+		// Get and validate trigger/processing URLs.
+		$trigger_url    = isset( $_POST['kolibri24_trigger_url'] ) ? esc_url( wp_unslash( $_POST['kolibri24_trigger_url'] ) ) : '';
+		$processing_url = isset( $_POST['kolibri24_processing_url'] ) ? esc_url( wp_unslash( $_POST['kolibri24_processing_url'] ) ) : '';
 
+		if ( empty( $trigger_url ) ) {
+			wp_send_json_error( array( 'message' => __( 'Trigger URL is required.', 'kolibri24-connect' ) ) );
+		}
+		if ( empty( $processing_url ) ) {
+			wp_send_json_error( array( 'message' => __( 'Processing URL is required.', 'kolibri24-connect' ) ) );
+		}
 
-		/**
-		 * AJAX handler for downloading archive media
-		 *
-		 * @since 1.3.0
-		 */
+		// Save the options.
+		update_option( 'kolibri24_api_url', $api_url );
+		update_option( 'kolibri24_trigger_url', $trigger_url );
+		update_option( 'kolibri24_processing_url', $processing_url );
 		public function download_archive_media() {
 			// Verify nonce.
 			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
