@@ -7,6 +7,20 @@
     margin-top: 20px;
 }
 
+/* Properties actions */
+.kolibri24-properties-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+#kolibri24-run-import-status {
+    flex: 1;
+}
+
 /* Card width helpers */
 .kolibri24-card-narrow {
     max-width: 800px;

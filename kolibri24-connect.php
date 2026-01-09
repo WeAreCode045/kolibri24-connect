@@ -5,7 +5,7 @@
  * Description:kolibri24-connect Plugin.
  * Author: Code045
  * Author URI: https://code045.nl/
-* Version: 1.3.0
+* Version: 1.4.0
  * Requires at least: 6.0
  * Tested up to: 6.7
  *

@@ -569,7 +569,51 @@ jQuery(function ($) {
                 e.preventDefault();
                 self.hidePreview();
             });
+
+            // Download Media button
+            $(document).on('click', '#kolibri24-download-media-btn', function(e) {
+                e.preventDefault();
+                self.downloadArchiveMedia();
+            });
         },
+                /**
+                 * Download media for selected properties in archive preview
+                 */
+                downloadArchiveMedia: function() {
+                    var self = this;
+                    var nonce = this.archiveDeleteBtn.data('nonce');
+                    var selectedFiles = [];
+                    // Collect selected property XML files
+                    this.archivePropertyList.find('.kolibri24-property-checkbox:checked').each(function() {
+                        selectedFiles.push($(this).val());
+                    });
+                    if (selectedFiles.length === 0) {
+                        this.showError('Please select at least one property to download media.');
+                        return;
+                    }
+                    this.showLoading('Downloading media for selected properties...');
+                    $.ajax({
+                        url: kolibri24Ajax.ajaxUrl,
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            action: 'kolibri24_download_archive_media',
+                            nonce: nonce,
+                            archive_path: this.currentArchivePath,
+                            selected_files: selectedFiles
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                self.showSuccess(response.data.message || 'Media downloaded successfully.');
+                            } else {
+                                self.showError(response.data.message || 'Failed to download media.');
+                            }
+                        },
+                        error: function() {
+                            self.showError('An error occurred while downloading media.');
+                        }
+                    });
+                },
         
         /**
          * Load archives list
@@ -855,5 +899,46 @@ jQuery(function ($) {
     $(document).on('click', '#kolibri24-save-settings-btn', function(e) {
         e.preventDefault();
         Kolibri24SettingsManager.saveSettings();
+    });
+
+    // Event delegation for Run WP All Import button
+    $(document).on('click', '#kolibri24-run-import-btn', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var nonce = btn.data('nonce');
+        var statusSpan = $('#kolibri24-run-import-status');
+
+        // Show loading state
+        btn.prop('disabled', true).addClass('disabled');
+        btn.find('.dashicons').removeClass('dashicons-update').addClass('dashicons-update spin');
+        statusSpan.html('<span class="notice notice-info"><p>' + kolibri24Ajax.strings.processing + '</p></span>');
+
+        $.ajax({
+            url: kolibri24Ajax.ajaxUrl,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'kolibri24_run_wp_all_import',
+                nonce: nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    statusSpan.html('<div class="notice notice-success is-dismissible"><p>' + response.data.message + '</p></div>');
+                    setTimeout(function() {
+                        statusSpan.fadeOut();
+                    }, 5000);
+                } else {
+                    statusSpan.html('<div class="notice notice-error is-dismissible"><p>' + response.data.message + '</p></div>');
+                }
+            },
+            error: function() {
+                statusSpan.html('<div class="notice notice-error is-dismissible"><p>' + kolibri24Ajax.strings.error + '</p></div>');
+            },
+            complete: function() {
+                // Restore button state
+                btn.prop('disabled', false).removeClass('disabled');
+                btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-update');
+            }
+        });
     });
 });

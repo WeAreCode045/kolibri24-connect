@@ -136,6 +136,15 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 					<?php else : ?>
 						<p><?php esc_html_e( 'No merged properties file found yet. Complete Step 1 and Step 2 to generate properties.xml.', 'kolibri24-connect' ); ?></p>
 					<?php endif; ?>
+					<?php if ( is_array( $props_info ) && ! empty( $props_info['output_file'] ) ) : ?>
+						<div class="kolibri24-properties-actions">
+							<button type="button" id="kolibri24-run-import-btn" class="button button-primary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+								<span class="dashicons dashicons-update"></span>
+								<?php esc_html_e( 'Run WP All Import', 'kolibri24-connect' ); ?>
+							</button>
+							<span id="kolibri24-run-import-status"></span>
+						</div>
+					<?php endif; ?>
 				</div>
 				<!-- Step 1: Select Import Source & Download & Extract -->
 				<div class="card kolibri24-step-1 kolibri24-card-narrow">
@@ -253,6 +262,10 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 						<div id="kolibri24-archive-property-list" class="kolibri24-property-grid"></div>
 						
 						<div class="kolibri24-archive-actions">
+							<button type="button" id="kolibri24-archive-download-media-btn" class="button button-primary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+								<span class="dashicons dashicons-format-image"></span>
+								<?php esc_html_e( 'Download Media', 'kolibri24-connect' ); ?>
+							</button>
 							<button type="button" id="kolibri24-archive-delete-btn" class="button button-secondary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
 								<span class="dashicons dashicons-trash" style="margin-top: 3px;"></span>
 								<?php esc_html_e( 'Delete Archive', 'kolibri24-connect' ); ?>
@@ -288,6 +301,26 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 											/>
 											<p class="description">
 												<?php esc_html_e( 'The URL to download the properties ZIP file from Kolibri24 API. Used when importing with "Download from Kolibri24" source.', 'kolibri24-connect' ); ?>
+											</p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row">
+											<label for="kolibri24-wp-all-import-id">
+												<?php esc_html_e( 'WP All Import ID', 'kolibri24-connect' ); ?>
+											</label>
+										</th>
+										<td>
+											<input 
+												type="number" 
+												id="kolibri24-wp-all-import-id" 
+												name="kolibri24_wp_all_import_id" 
+												class="small-text" 
+												placeholder="123" 
+												value="<?php echo esc_attr( get_option( 'kolibri24_wp_all_import_id' ) ); ?>"
+											/>
+											<p class="description">
+												<?php esc_html_e( 'The import ID from WP All Import plugin. Used to automatically trigger imports when properties are merged.', 'kolibri24-connect' ); ?>
 											</p>
 										</td>
 									</tr>

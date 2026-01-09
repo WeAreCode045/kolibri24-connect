@@ -36,6 +36,12 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			
 			// AJAX handler for saving settings.
 			add_action( 'wp_ajax_kolibri24_save_settings', array( $this, 'save_settings' ) );
+			
+			// AJAX handler for running WP All Import.
+			add_action( 'wp_ajax_kolibri24_run_wp_all_import', array( $this, 'run_wp_all_import' ) );
+			
+			// AJAX handler for downloading archive media.
+			add_action( 'wp_ajax_kolibri24_download_archive_media', array( $this, 'download_archive_media' ) );
 		}
 
 		/**
@@ -524,12 +530,294 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				);
 			}
 			
-			// Save the option.
+			// Get WP All Import ID (optional).
+			$import_id = isset( $_POST['kolibri24_wp_all_import_id'] ) ? intval( wp_unslash( $_POST['kolibri24_wp_all_import_id'] ) ) : 0;
+			
+			// Save the options.
 			update_option( 'kolibri24_api_url', $api_url );
+			if ( $import_id > 0 ) {
+				update_option( 'kolibri24_wp_all_import_id', $import_id );
+			} else {
+				delete_option( 'kolibri24_wp_all_import_id' );
+			}
 			
 			wp_send_json_success(
 				array(
 					'message' => __( 'Settings saved successfully.', 'kolibri24-connect' ),
+				)
+			);
+		}
+
+		/**
+		 * AJAX handler for running WP All Import
+		 *
+		 * @since 1.2.0
+		 */
+		public function run_wp_all_import() {
+			// Verify nonce.
+			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Security verification failed.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Check user capabilities.
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Get the WP All Import ID from settings.
+			$import_id = intval( get_option( 'kolibri24_wp_all_import_id' ) );
+			
+			if ( ! $import_id || $import_id <= 0 ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'WP All Import ID is not configured. Please set it in Settings.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Execute WP-CLI command to run the import.
+			$command = sprintf( 'wp all-import run %d', $import_id );
+			
+			// Check if WP_CLI is available (for direct execution).
+			if ( class_exists( 'WP_CLI' ) ) {
+				try {
+					// Run the import via WP-CLI class.
+					ob_start();
+					WP_CLI::runcommand( "all-import run {$import_id}" );
+					$output = ob_get_clean();
+					
+					wp_send_json_success(
+						array(
+							'message'   => __( 'WP All Import executed successfully.', 'kolibri24-connect' ),
+							'import_id' => $import_id,
+							'output'    => $output,
+						)
+					);
+				} catch ( Exception $e ) {
+					wp_send_json_error(
+						array(
+							'message' => sprintf(
+								/* translators: %s: error message */
+								__( 'WP All Import execution failed: %s', 'kolibri24-connect' ),
+								$e->getMessage()
+							),
+						)
+					);
+				}
+			} else {
+				// Fallback: attempt via shell_exec if WP_CLI class is not available.
+				$output = shell_exec( escapeshellcmd( $command ) . ' 2>&1' );
+				
+				if ( null !== $output ) {
+					wp_send_json_success(
+						array(
+							'message'   => __( 'WP All Import executed successfully.', 'kolibri24-connect' ),
+							'import_id' => $import_id,
+							'output'    => $output,
+						)
+					);
+				} else {
+					wp_send_json_error(
+						array(
+							'message' => __( 'WP All Import execution failed. WP-CLI may not be available on this server.', 'kolibri24-connect' ),
+						)
+					);
+				}
+			}
+		}
+
+		/**
+		 * AJAX handler for downloading archive media
+		 *
+		 * @since 1.3.0
+		 */
+		public function download_archive_media() {
+			// Verify nonce.
+			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Security verification failed.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Check user capabilities.
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Get selected file paths.
+			if ( ! isset( $_POST['selected_files'] ) || empty( $_POST['selected_files'] ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'No properties selected.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Sanitize file paths.
+			$selected_files = array_map( 'sanitize_text_field', wp_unslash( $_POST['selected_files'] ) );
+			
+			// Validate file paths (security check).
+			$upload_dir  = wp_upload_dir();
+			$base_path   = trailingslashit( $upload_dir['basedir'] ) . 'kolibri/archived/';
+			$valid_files = array();
+			
+			foreach ( $selected_files as $file_path ) {
+				// Ensure file is within our kolibri directory.
+				if ( 0 === strpos( $file_path, $base_path ) && file_exists( $file_path ) ) {
+					$valid_files[] = $file_path;
+				}
+			}
+			
+			if ( empty( $valid_files ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'No valid property files found.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Process media downloads.
+			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
+			$xml_processor = new Kolibri24_Connect_Xml_Processor();
+			
+			$media_base_path = trailingslashit( $upload_dir['basedir'] ) . 'properties/media/';
+			$downloaded_count = 0;
+			$failed_count = 0;
+			$errors = array();
+			
+			foreach ( $valid_files as $xml_file_path ) {
+				// Read and parse XML.
+				$xml_content = file_get_contents( $xml_file_path );
+				if ( ! $xml_content ) {
+					$failed_count++;
+					continue;
+				}
+				
+				// Parse XML.
+				libxml_use_internal_errors( true );
+				$dom = new DOMDocument( '1.0', 'UTF-8' );
+				if ( ! $dom->loadXML( $xml_content, LIBXML_NOCDATA ) ) {
+					libxml_clear_errors();
+					$failed_count++;
+					continue;
+				}
+				
+				$xpath = new DOMXPath( $dom );
+				
+				// Extract property ID.
+				$property_id_nodes = $xpath->query( '//PropertyInfo/PublicReferenceNumber/text()' );
+				$property_id = ( $property_id_nodes && $property_id_nodes->length > 0 ) ? trim( $property_id_nodes->item( 0 )->nodeValue ) : null;
+				
+				if ( ! $property_id ) {
+					$failed_count++;
+					continue;
+				}
+				
+				// Extract all image URLs.
+				$image_nodes = $xpath->query( '//Attachments/Attachment/URLNormalizedFile/text()' );
+				
+				if ( ! $image_nodes || $image_nodes->length === 0 ) {
+					continue; // No images for this property.
+				}
+				
+				// Create media directory for this property.
+				$property_media_dir = $media_base_path . sanitize_file_name( $property_id ) . '/';
+				if ( ! wp_mkdir_p( $property_media_dir ) ) {
+					$failed_count++;
+					$errors[] = sprintf(
+						__( 'Failed to create media directory for property %s.', 'kolibri24-connect' ),
+						esc_html( $property_id )
+					);
+					continue;
+				}
+				
+				// Download each image.
+				for ( $i = 0; $i < $image_nodes->length; $i++ ) {
+					$image_url = trim( $image_nodes->item( $i )->nodeValue );
+					
+					if ( empty( $image_url ) ) {
+						continue;
+					}
+					
+					// Validate URL.
+					if ( ! filter_var( $image_url, FILTER_VALIDATE_URL ) ) {
+						continue;
+					}
+					
+					// Get filename from URL.
+					$parsed_url = wp_parse_url( $image_url );
+					$filename = basename( $parsed_url['path'] );
+					$filename = sanitize_file_name( $filename );
+					
+					if ( empty( $filename ) ) {
+						$filename = 'image_' . $i . '.jpg';
+					}
+					
+					$file_path = $property_media_dir . $filename;
+					
+					// Skip if file already exists.
+					if ( file_exists( $file_path ) ) {
+						$downloaded_count++;
+						continue;
+					}
+					
+					// Download the file.
+					$response = wp_remote_get(
+						$image_url,
+						array(
+							'timeout' => 30,
+							'stream'  => true,
+							'filename' => $file_path,
+						)
+					);
+					
+					if ( is_wp_error( $response ) ) {
+						$failed_count++;
+						$errors[] = sprintf(
+							__( 'Failed to download image from %s', 'kolibri24-connect' ),
+							esc_url( $image_url )
+						);
+					} else {
+						$response_code = wp_remote_retrieve_response_code( $response );
+						if ( 200 === $response_code ) {
+							$downloaded_count++;
+						} else {
+							$failed_count++;
+							$errors[] = sprintf(
+								__( 'HTTP error %d downloading %s', 'kolibri24-connect' ),
+								intval( $response_code ),
+								esc_url( $image_url )
+							);
+						}
+					}
+				}
+			}
+			
+			// Send success response.
+			wp_send_json_success(
+				array(
+					'message'           => sprintf(
+						__( 'Downloaded %d images. %d failed.', 'kolibri24-connect' ),
+						intval( $downloaded_count ),
+						intval( $failed_count )
+					),
+					'downloaded_count'  => $downloaded_count,
+					'failed_count'      => $failed_count,
+					'errors'            => $errors,
 				)
 			);
 		}
