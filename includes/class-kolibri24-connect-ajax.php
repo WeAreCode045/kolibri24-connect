@@ -78,12 +78,16 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Failed to call processing URL.', 'kolibri24-connect' ), 'error' => $processing_response->get_error_message() ) );
 		}
 
-		$body = wp_remote_retrieve_body( $processing_response );
-		// Optionally, parse $body for completion status if needed
-		wp_send_json_success( array( 'message' => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ), 'processing_response' => $body ) );
-		 
-		// AJAX handler for downloading and extracting ZIP
-		
+			$body = wp_remote_retrieve_body( $processing_response );
+			// Optionally, parse $body for completion status if needed
+			wp_send_json_success( array( 'message' => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ), 'processing_response' => $body ) );
+		}
+	
+		/**
+		 * AJAX handler for downloading and extracting ZIP
+		 *
+		 * @since 1.0.0
+		 */
 		public function download_and_extract() {
 			// Verify nonce.
 			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
@@ -93,7 +97,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 					)
 				);
 			}
-
+	
 			// Check user capabilities.
 			if ( ! current_user_can( 'manage_options' ) ) {
 				wp_send_json_error(
@@ -102,15 +106,15 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 					)
 				);
 			}
-
+	
 			// Increase time limit for processing.
 			set_time_limit( 600 ); // 10 minutes.
-
+	
 			// Increase memory limit if needed.
 			if ( function_exists( 'wp_raise_memory_limit' ) ) {
 				wp_raise_memory_limit( 'admin' );
 			}
-
+	
 			// Determine source and get ZIP file path.
 			$source = isset( $_POST['source'] ) ? sanitize_text_field( wp_unslash( $_POST['source'] ) ) : 'kolibri24';
 			
@@ -144,7 +148,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 					)
 				);
 			}
-
+	
 			if ( ! $download_result['success'] ) {
 				wp_send_json_error(
 					array(
@@ -153,16 +157,16 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 					)
 				);
 			}
-
+	
 			// STEP 2: Extract ZIP file.
 			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
 			$xml_processor = new Kolibri24_Connect_Xml_Processor();
-
+	
 			$extract_result = $xml_processor->extract_zip(
 				$download_result['file_path'],
 				$download_result['dated_dir']
 			);
-
+	
 			if ( ! $extract_result['success'] ) {
 				wp_send_json_error(
 					array(
@@ -171,10 +175,10 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 					)
 				);
 			}
-
+	
 			// STEP 3: Extract property previews.
 			$preview_result = $xml_processor->extract_property_previews( $extract_result['xml_files'] );
-
+	
 			if ( ! $preview_result['success'] ) {
 				wp_send_json_error(
 					array(
@@ -183,7 +187,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 					)
 				);
 			}
-
+	
 			// Success - return preview data.
 			wp_send_json_success(
 				array(
