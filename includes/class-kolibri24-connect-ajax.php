@@ -33,6 +33,9 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			
 			// AJAX handler for deleting an archive.
 			add_action( 'wp_ajax_kolibri24_delete_archive', array( $this, 'delete_archive' ) );
+			
+			// AJAX handler for saving settings.
+			add_action( 'wp_ajax_kolibri24_save_settings', array( $this, 'save_settings' ) );
 		}
 
 		/**
@@ -460,6 +463,59 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			wp_send_json_success(
 				array(
 					'message' => __( 'Archive deleted successfully.', 'kolibri24-connect' ),
+				)
+			);
+		}
+
+		/**
+		 * AJAX handler for saving settings
+		 *
+		 * @since 1.1.0
+		 */
+		public function save_settings() {
+			// Verify nonce.
+			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Security verification failed.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Check user capabilities.
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Get and validate the API URL.
+			if ( ! isset( $_POST['kolibri24_api_url'] ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'API URL is required.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			$api_url = esc_url( wp_unslash( $_POST['kolibri24_api_url'] ) );
+			
+			if ( empty( $api_url ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Please enter a valid URL.', 'kolibri24-connect' ),
+					)
+				);
+			}
+			
+			// Save the option.
+			update_option( 'kolibri24_api_url', $api_url );
+			
+			wp_send_json_success(
+				array(
+					'message' => __( 'Settings saved successfully.', 'kolibri24-connect' ),
 				)
 			);
 		}

@@ -20,7 +20,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Zip_Handler' ) ) {
 	class Kolibri24_Connect_Zip_Handler {
 
 		/**
-		 * ZIP download URL
+		 * ZIP download URL (default fallback)
 		 *
 		 * @var string
 		 */
@@ -50,6 +50,12 @@ if ( ! class_exists( 'Kolibri24_Connect_Zip_Handler' ) ) {
 			// Set base upload path.
 			$upload_dir            = wp_upload_dir();
 			$this->base_upload_path = trailingslashit( $upload_dir['basedir'] ) . 'kolibri/';
+			
+			// Get saved API URL from options, fallback to default.
+			$saved_url = get_option( 'kolibri24_api_url' );
+			if ( ! empty( $saved_url ) ) {
+				$this->zip_url = esc_url( $saved_url );
+			}
 		}
 
 		/**

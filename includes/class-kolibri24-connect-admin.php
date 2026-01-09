@@ -66,20 +66,16 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 					<a href="?page=kolibri24-properties-import&tab=archive" class="nav-tab <?php echo 'archive' === $active_tab ? 'nav-tab-active' : ''; ?>">
 						<?php esc_html_e( 'Archive', 'kolibri24-connect' ); ?>
 					</a>
-				</nav>
-				
-				<div class="kolibri24-import-container">
-				<?php if ( 'import' === $active_tab ) : ?>
-					<!-- Step 1: Select Import Source & Download & Extract -->
-					<div class="card kolibri24-step-1" style="max-width: 800px;">
-						<h2><?php esc_html_e( 'Step 1: Select Import Source & Extract Properties', 'kolibri24-connect' ); ?></h2>
-						
-						<!-- Import Source Selection -->
-						<div class="kolibri24-source-selection" style="margin-bottom: 30px;">
-							<h3><?php esc_html_e( 'Select Import Source', 'kolibri24-connect' ); ?></h3>
-							
-							<div class="kolibri24-source-option">
-								<label>
+				<a href="?page=kolibri24-properties-import&tab=settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Settings', 'kolibri24-connect' ); ?>
+				</a>
+			</nav>
+			
+			<div class="kolibri24-import-container">
+			<?php if ( 'import' === $active_tab ) : ?>
+				<!-- Step 1: Select Import Source & Download & Extract -->
+				<div class="card kolibri24-step-1" style="max-width: 800px;">
+					<h2><?php esc_html_e( 'Step 1: Select Import Source & Extract Properties', 'kolibri24-connect' ); ?></h2>
 									<input type="radio" name="kolibri24-import-source" value="kolibri24" checked />
 									<strong><?php esc_html_e( 'Download from Kolibri24', 'kolibri24-connect' ); ?></strong>
 									<p style="margin-top: 5px; margin-left: 25px; color: #666;">
@@ -199,6 +195,47 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 								<?php esc_html_e( 'Back to List', 'kolibri24-connect' ); ?>
 							</button>
 						</div>
+					</div>
+				<?php elseif ( 'settings' === $active_tab ) : ?>
+					<!-- Settings Tab -->
+					<div class="card" style="max-width: 800px; margin-top: 20px;">
+						<h2><?php esc_html_e( 'Plugin Settings', 'kolibri24-connect' ); ?></h2>
+						<p><?php esc_html_e( 'Configure plugin settings and API endpoints.', 'kolibri24-connect' ); ?></p>
+						
+						<form id="kolibri24-settings-form" method="post" action="">
+							<table class="form-table">
+								<tbody>
+									<tr>
+										<th scope="row">
+											<label for="kolibri24-api-url">
+												<?php esc_html_e( 'Kolibri24 API URL', 'kolibri24-connect' ); ?>
+											</label>
+										</th>
+										<td>
+											<input 
+												type="url" 
+												id="kolibri24-api-url" 
+												name="kolibri24_api_url" 
+												class="regular-text" 
+												placeholder="https://sitelink.kolibri24.com/..." 
+												value="<?php echo esc_attr( get_option( 'kolibri24_api_url' ) ); ?>"
+											/>
+											<p class="description">
+												<?php esc_html_e( 'The URL to download the properties ZIP file from Kolibri24 API. Used when importing with "Download from Kolibri24" source.', 'kolibri24-connect' ); ?>
+											</p>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+							
+							<p>
+								<button type="button" id="kolibri24-save-settings-btn" class="button button-primary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+									<?php esc_html_e( 'Save Settings', 'kolibri24-connect' ); ?>
+								</button>
+							</p>
+							
+							<div id="kolibri24-settings-status"></div>
+						</form>
 					</div>
 				<?php endif; ?>
 				</div>

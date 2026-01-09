@@ -130,12 +130,21 @@ $base_path = trailingslashit( $upload_dir['basedir'] ) . 'kolibri/';
 
 ## Archive Tab Functionality
 
-The plugin has **Import** and **Archive** tabs (added recently):
+The plugin has **Import**, **Archive**, and **Settings** tabs:
 
 - **Archive List**: Shows all dated directories in `/uploads/kolibri/archived/`
 - **Archive Preview**: Clicking "View" shows property grid (same UI as import step 2)
 - **Delete**: Removes entire dated directory
 - **AJAX Actions**: `kolibri24_get_archives`, `kolibri24_view_archive`, `kolibri24_delete_archive`
+
+## Settings Tab Functionality
+
+The plugin has a **Settings tab** for configuring the Kolibri24 API URL:
+
+- **Kolibri24 API URL**: Text field to save custom URL for "Download from Kolibri24" source
+- **Default URL**: Hardcoded fallback if no custom URL is configured
+- **AJAX Action**: `kolibri24_save_settings` saves URL to WordPress options
+- **Implementation**: Zip_Handler constructor reads saved URL via `get_option( 'kolibri24_api_url' )`
 
 ## JavaScript Architecture
 

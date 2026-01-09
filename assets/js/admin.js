@@ -778,9 +778,121 @@ jQuery(function ($) {
             this.archiveStatus.html('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');
         }
     };
+
+    /**
+     * Settings Handler
+     */
+    var Kolibri24SettingsManager = {
+        
+        // UI Elements
+        form: null,
+        saveBtn: null,
+        statusDiv: null,
+        apiUrlInput: null,
+        
+        /**
+         * Initialize the settings manager
+         */
+        init: function() {
+            this.form = $('#kolibri24-settings-form');
+            this.saveBtn = $('#kolibri24-save-settings-btn');
+            this.statusDiv = $('#kolibri24-settings-status');
+            this.apiUrlInput = $('#kolibri24-api-url');
+            
+            this.bindEvents();
+        },
+        
+        /**
+         * Bind event handlers
+         */
+        bindEvents: function() {
+            var self = this;
+            
+            this.saveBtn.on('click', function(e) {
+                e.preventDefault();
+                self.saveSettings();
+            });
+        },
+        
+        /**
+         * Save settings via AJAX
+         */
+        saveSettings: function() {
+            var self = this;
+            var apiUrl = this.apiUrlInput.val();
+            var nonce = this.saveBtn.data('nonce');
+            
+            // Clear previous messages
+            this.statusDiv.empty();
+            
+            // Validate URL
+            if (!apiUrl) {
+                this.showError('Please enter a valid URL');
+                return;
+            }
+            
+            // Show loading state
+            this.saveBtn.prop('disabled', true);
+            this.showLoading('Saving settings...');
+            
+            // Make AJAX request
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'kolibri24_save_settings',
+                    nonce: nonce,
+                    kolibri24_api_url: apiUrl
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showSuccess(response.data.message);
+                    } else {
+                        self.showError(response.data.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    self.showError('An error occurred while saving settings');
+                },
+                complete: function() {
+                    self.saveBtn.prop('disabled', false);
+                }
+            });
+        },
+        
+        /**
+         * Show loading message
+         */
+        showLoading: function(message) {
+            this.statusDiv.html('<div class="notice notice-info"><p>' + message + '</p></div>');
+        },
+        
+        /**
+         * Show success message
+         */
+        showSuccess: function(message) {
+            this.statusDiv.html('<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>');
+        },
+        
+        /**
+         * Show error message
+         */
+        showError: function(message) {
+            this.statusDiv.html('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');
+        }
+    };
+    
+    // Initialize property processor if on import tab
+    if ($('#kolibri24-download-btn').length > 0) {
+        Kolibri24PropertyProcessor.init();
+    }
     
     // Initialize archive manager if on archive tab
     if ($('#kolibri24-archive-list').length > 0) {
         Kolibri24ArchiveManager.init();
     }
-});
+    
+    // Initialize settings manager if on settings tab
+    if ($('#kolibri24-settings-form').length > 0) {
+        Kolibri24SettingsManager.init();
+    }
