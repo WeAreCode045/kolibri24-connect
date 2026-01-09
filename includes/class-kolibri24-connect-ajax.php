@@ -572,6 +572,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		// Get and validate trigger/processing URLs.
 		$trigger_url    = isset( $_POST['kolibri24_trigger_url'] ) ? esc_url( wp_unslash( $_POST['kolibri24_trigger_url'] ) ) : '';
 		$processing_url = isset( $_POST['kolibri24_processing_url'] ) ? esc_url( wp_unslash( $_POST['kolibri24_processing_url'] ) ) : '';
+		$import_id      = isset( $_POST['kolibri24_import_id'] ) ? sanitize_text_field( wp_unslash( $_POST['kolibri24_import_id'] ) ) : '';
 
 		if ( empty( $trigger_url ) ) {
 			wp_send_json_error( array( 'message' => __( 'Trigger URL is required.', 'kolibri24-connect' ) ) );
@@ -579,11 +580,15 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		if ( empty( $processing_url ) ) {
 			wp_send_json_error( array( 'message' => __( 'Processing URL is required.', 'kolibri24-connect' ) ) );
 		}
+		if ( empty( $import_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Import ID is required.', 'kolibri24-connect' ) ) );
+		}
 
 		// Save the options.
 		update_option( 'kolibri24_api_url', $api_url );
 		update_option( 'kolibri24_trigger_url', $trigger_url );
 		update_option( 'kolibri24_processing_url', $processing_url );
+		update_option( 'kolibri24_import_id', $import_id );
 
 		wp_send_json_success(
 			array(

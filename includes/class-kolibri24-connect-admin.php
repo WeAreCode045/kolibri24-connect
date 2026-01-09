@@ -344,6 +344,26 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 											</p>
 										</td>
 									</tr>
+									<tr>
+										<th scope="row">
+											<label for="kolibri24-import-id">
+												<?php esc_html_e( 'WP All Import Import ID', 'kolibri24-connect' ); ?>
+											</label>
+										</th>
+										<td>
+											<input 
+												type="text" 
+												id="kolibri24-import-id" 
+												name="kolibri24_import_id" 
+												class="regular-text" 
+												placeholder="1" 
+												value="<?php echo esc_attr( get_option( 'kolibri24_import_id' ) ); ?>"
+											/>
+											<p class="description">
+												<?php esc_html_e( 'The ID of the WP All Import configuration to use for importing properties.', 'kolibri24-connect' ); ?>
+											</p>
+										</td>
+									</tr>
 								</tbody>
 							</table>
 							
@@ -379,7 +399,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 		 * @param    string $hook_suffix The current admin page hook suffix.
 		 */
 		public function enqueue_scripts( $hook_suffix ) {
-		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.2.3', true );
+		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.2.4', true );
 			// Localize script with AJAX data.
 			wp_localize_script(
 				'kolibri24-connect-admin',

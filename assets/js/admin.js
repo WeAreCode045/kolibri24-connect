@@ -896,6 +896,7 @@ jQuery(function ($) {
             var apiUrl = $('#kolibri24-api-url').val();
             var triggerUrl = $('#kolibri24-trigger-url').val();
             var processingUrl = $('#kolibri24-processing-url').val();
+            var importId = $('#kolibri24-import-id').val();
             var nonce = $('#kolibri24-save-settings-btn').data('nonce');
             var statusDiv = $('#kolibri24-settings-status');
 
@@ -918,6 +919,11 @@ jQuery(function ($) {
                 return;
             }
 
+            if (!importId) {
+                statusDiv.html('<div class="notice notice-error is-dismissible"><p>Please enter a valid Import ID</p></div>');
+                return;
+            }
+
             // Show loading state
             $('#kolibri24-save-settings-btn').prop('disabled', true);
             statusDiv.html('<div class="notice notice-info"><p>Saving settings...</p></div>');
@@ -932,6 +938,7 @@ jQuery(function ($) {
                     kolibri24_api_url: apiUrl,
                     kolibri24_trigger_url: triggerUrl,
                     kolibri24_processing_url: processingUrl,
+                    kolibri24_import_id: importId,
                 },
                 success: function(response) {
                     if (response.success) {
