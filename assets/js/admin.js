@@ -893,15 +893,27 @@ jQuery(function ($) {
          */
         saveSettings: function() {
             var apiUrl = $('#kolibri24-api-url').val();
+            var triggerUrl = $('#kolibri24-trigger-url').val();
+            var processingUrl = $('#kolibri24-processing-url').val();
             var nonce = $('#kolibri24-save-settings-btn').data('nonce');
             var statusDiv = $('#kolibri24-settings-status');
 
             // Clear previous messages
             statusDiv.empty();
 
-            // Validate URL
+            // Validate URLs
             if (!apiUrl) {
-                statusDiv.html('<div class="notice notice-error is-dismissible"><p>Please enter a valid URL</p></div>');
+                statusDiv.html('<div class="notice notice-error is-dismissible"><p>Please enter a valid API URL</p></div>');
+                return;
+            }
+
+            if (!triggerUrl) {
+                statusDiv.html('<div class="notice notice-error is-dismissible"><p>Please enter a valid Trigger URL</p></div>');
+                return;
+            }
+
+            if (!processingUrl) {
+                statusDiv.html('<div class="notice notice-error is-dismissible"><p>Please enter a valid Processing URL</p></div>');
                 return;
             }
 
@@ -917,6 +929,8 @@ jQuery(function ($) {
                     action: 'kolibri24_save_settings',
                     nonce: nonce,
                     kolibri24_api_url: apiUrl,
+                    kolibri24_trigger_url: triggerUrl,
+                    kolibri24_processing_url: processingUrl,
                 },
                 success: function(response) {
                     if (response.success) {
