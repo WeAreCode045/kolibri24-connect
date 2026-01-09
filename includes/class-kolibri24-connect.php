@@ -1,3 +1,5 @@
+// Load after-import hook for WP All Import
+require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/kolibri24-after-import-hook.php';
 <?php
 /**
  * Plugin main class file.

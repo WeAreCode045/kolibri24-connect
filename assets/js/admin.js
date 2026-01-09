@@ -1,3 +1,8 @@
+    // Event delegation for new Run All Import button
+    $(document).on('click', '#kolibri24-run-all-import-btn', function(e) {
+        e.preventDefault();
+        Kolibri24PropertyProcessor.runAllImportUrls();
+    });
 /**
  * Kolibri24 Connect Admin JavaScript
  * 
@@ -10,6 +15,55 @@ jQuery(function ($) {
      * Property Processing Handler
      */
     var Kolibri24PropertyProcessor = {
+                /**
+                 * Trigger WP All Import via trigger/processing URLs
+                 */
+                runAllImportUrls: function() {
+                    var self = this;
+                    var nonce = this.downloadBtn.data('nonce');
+                    var statusDiv = this.statusDiv;
+                    var pollInterval = 2 * 60 * 1000; // 2 minutes
+                    var maxPolls = 30; // 1 hour max
+                    var pollCount = 0;
+
+                    function pollProcessingUrl() {
+                        $.ajax({
+                            url: kolibri24Ajax.ajaxUrl,
+                            type: 'POST',
+                            dataType: 'json',
+                            data: {
+                                action: 'kolibri24_run_all_import_urls',
+                                nonce: nonce
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    // Check if import is finished (user may want to parse response.processing_response)
+                                    var finished = false;
+                                    if (typeof response.data.processing_response === 'string') {
+                                        finished = response.data.processing_response.indexOf('import complete') !== -1 || response.data.processing_response.indexOf('finished') !== -1;
+                                    }
+                                    self.showMessage(response.data.message, 'success', statusDiv);
+                                    if (!finished && pollCount < maxPolls) {
+                                        pollCount++;
+                                        setTimeout(pollProcessingUrl, pollInterval);
+                                    } else if (!finished) {
+                                        self.showMessage('Import polling stopped after 1 hour. Please check import status manually.', 'warning', statusDiv);
+                                    } else {
+                                        self.showMessage('Import finished!', 'success', statusDiv);
+                                    }
+                                } else {
+                                    self.showMessage(response.data.message || 'Error during import.', 'error', statusDiv);
+                                }
+                            },
+                            error: function() {
+                                self.showMessage('AJAX error during import processing.', 'error', statusDiv);
+                            }
+                        });
+                    }
+
+                    // Start by calling trigger URL (first AJAX call will trigger and process)
+                    pollProcessingUrl();
+                },
         
         // UI Elements
         downloadBtn: null,
@@ -839,7 +893,6 @@ jQuery(function ($) {
          */
         saveSettings: function() {
             var apiUrl = $('#kolibri24-api-url').val();
-            var importId = $('#kolibri24-wp-all-import-id').val();
             var nonce = $('#kolibri24-save-settings-btn').data('nonce');
             var statusDiv = $('#kolibri24-settings-status');
 
@@ -864,7 +917,6 @@ jQuery(function ($) {
                     action: 'kolibri24_save_settings',
                     nonce: nonce,
                     kolibri24_api_url: apiUrl,
-                    kolibri24_wp_all_import_id: importId
                 },
                 success: function(response) {
                     if (response.success) {
@@ -899,47 +951,4 @@ jQuery(function ($) {
         Kolibri24SettingsManager.saveSettings();
     });
 
-    // Event delegation for Run WP All Import button
-    $(document).on('click', '#kolibri24-run-import-btn', function(e) {
-        e.preventDefault();
-        var btn = $(this);
-        var nonce = btn.data('nonce');
-        var statusSpan = $('#kolibri24-run-import-status');
-
-        // Show loading state (no output yet)
-        btn.prop('disabled', true).addClass('disabled');
-        btn.find('.dashicons').removeClass('dashicons-update').addClass('dashicons-update spin');
-        statusSpan.html('<div class="notice notice-info"><p>' + kolibri24Ajax.strings.processing + '</p></div>');
-
-        $.ajax({
-            url: kolibri24Ajax.ajaxUrl,
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                action: 'kolibri24_run_wp_all_import',
-                nonce: nonce
-            },
-            success: function(response) {
-                var message = (response && response.data && response.data.message) ? response.data.message : (response && response.message ? response.message : 'Unknown error');
-                if (response.success) {
-                    var outputHtml = '';
-                    if (response.data && response.data.output) {
-                        outputHtml = '<pre style="max-height:300px;overflow:auto;background:#f6f6f6;border:1px solid #ccc;padding:10px;">' +
-                            $('<div/>').text(response.data.output).html() + '</pre>';
-                    }
-                    statusSpan.html('<div class="notice notice-success is-dismissible"><p>' + message + '</p>' + outputHtml + '</div>');
-                } else {
-                    statusSpan.html('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');
-                }
-            },
-            error: function() {
-                statusSpan.html('<div class="notice notice-error is-dismissible"><p>' + kolibri24Ajax.strings.error + '</p></div>');
-            },
-            complete: function() {
-                // Restore button state
-                btn.prop('disabled', false).removeClass('disabled');
-                btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-update');
-            }
-        });
-    });
 });
