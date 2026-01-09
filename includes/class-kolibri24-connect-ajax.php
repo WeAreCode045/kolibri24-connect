@@ -323,7 +323,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			}
 			
 			// Get property previews from this archive.
-			require_once KOLIBRI24_CONNECT_PLUGIN_DIR . 'includes/class-kolibri24-connect-xml-processor.php';
+			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
 			$xml_processor = new Kolibri24_Connect_Xml_Processor();
 			$previews = $xml_processor->extract_property_previews( $archive_path );
 			
