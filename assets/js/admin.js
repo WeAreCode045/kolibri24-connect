@@ -1,8 +1,3 @@
-    // Event delegation for new Run All Import button
-    $(document).on('click', '#kolibri24-run-all-import-btn', function(e) {
-        e.preventDefault();
-        Kolibri24PropertyProcessor.runAllImportUrls();
-    });
 /**
  * Kolibri24 Connect Admin JavaScript
  * 
@@ -10,6 +5,12 @@
  */
 jQuery(function ($) {
     'use strict';
+
+    // Event delegation for new Run All Import button
+    $(document).on('click', '#kolibri24-run-all-import-btn', function(e) {
+        e.preventDefault();
+        Kolibri24PropertyProcessor.runAllImportUrls();
+    });
 
     /**
      * Property Processing Handler

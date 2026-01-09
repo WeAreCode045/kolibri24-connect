@@ -379,7 +379,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 		 * @param    string $hook_suffix The current admin page hook suffix.
 		 */
 		public function enqueue_scripts( $hook_suffix ) {
-		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.2.2', true );
+		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.2.3', true );
 			// Localize script with AJAX data.
 			wp_localize_script(
 				'kolibri24-connect-admin',
