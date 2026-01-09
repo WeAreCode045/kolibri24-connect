@@ -584,7 +584,21 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		update_option( 'kolibri24_api_url', $api_url );
 		update_option( 'kolibri24_trigger_url', $trigger_url );
 		update_option( 'kolibri24_processing_url', $processing_url );
-		public function download_archive_media() {
+
+		wp_send_json_success(
+			array(
+				'message' => __( 'Settings saved successfully.', 'kolibri24-connect' ),
+			)
+		);
+	}
+
+
+	/**
+	 * AJAX handler for downloading archive media
+	 *
+	 * @since 1.3.0
+	 */
+	public function download_archive_media() {
 			// Verify nonce.
 			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
 				wp_send_json_error(
