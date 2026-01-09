@@ -691,7 +691,7 @@ jQuery(function ($) {
                     
                     // Details
                     html += '<div class="kolibri24-property-details">';
-                    html += '<h3>' + (property.id || 'N/A') + '</h3>';
+                    html += '<h3>' + (property.property_id || 'N/A') + '</h3>';
                     if (property.address) {
                         html += '<p><strong>Address:</strong> ' + property.address + '</p>';
                     }

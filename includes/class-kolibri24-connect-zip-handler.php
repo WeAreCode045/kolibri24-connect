@@ -325,13 +325,13 @@ if ( ! class_exists( 'Kolibri24_Connect_Zip_Handler' ) ) {
 		/**
 		 * Create dated directory for storing downloaded files
 		 *
-		 * Directory structure: /wp-content/uploads/kolibri/archived/DD-MM-YYYY/
+		 * Directory structure: /wp-content/uploads/kolibri/archived/DD-MM-YYYY_HH-MM-SS/
 		 *
 		 * @return string|WP_Error Directory path on success, WP_Error on failure.
 		 */
 		private function create_dated_directory() {
-			// Get current date in DD-MM-YYYY format.
-			$date_folder = gmdate( 'd-m-Y' );
+			// Get current date and time in DD-MM-YYYY_HH-MM-SS format (UTC).
+			$date_folder = gmdate( 'd-m-Y_H-i-s' );
 
 			// Build full directory path.
 			$dir_path = $this->base_upload_path . 'archived/' . $date_folder . '/';
