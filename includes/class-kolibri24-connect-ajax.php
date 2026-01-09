@@ -584,20 +584,20 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			}
 			
 			// Execute WP-CLI command to run the import.
-			$command = sprintf( 'wp all-import run %d', $import_id );
+			   $command = sprintf( 'wp all-import run %d --force-run', $import_id );
 			
 			// Check if WP_CLI is available (for direct execution).
-			if ( class_exists( 'WP_CLI' ) ) {
-				try {
-					// Run the import via WP-CLI class.
-					ob_start();
-					WP_CLI::runcommand( "all-import run {$import_id}" );
-					$output = ob_get_clean();
-					
-					wp_send_json_success(
-						array(
-							'message'   => __( 'WP All Import executed successfully.', 'kolibri24-connect' ),
-							'import_id' => $import_id,
+			   if ( class_exists( 'WP_CLI' ) ) {
+				   try {
+					   // Run the import via WP-CLI class with --force-run.
+					   ob_start();
+					   WP_CLI::runcommand( "all-import run {$import_id} --force-run" );
+					   $output = ob_get_clean();
+
+					   wp_send_json_success(
+						   array(
+							   'message'   => __( 'WP All Import executed successfully.', 'kolibri24-connect' ),
+							   'import_id' => $import_id,
 							'output'    => $output,
 						)
 					);

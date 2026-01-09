@@ -921,10 +921,12 @@ jQuery(function ($) {
             },
             success: function(response) {
                 if (response.success) {
-                    statusSpan.html('<div class="notice notice-success is-dismissible"><p>' + response.data.message + '</p></div>');
-                    setTimeout(function() {
-                        statusSpan.fadeOut();
-                    }, 5000);
+                    var outputHtml = '';
+                    if (response.data.output) {
+                        outputHtml = '<pre style="max-height:300px;overflow:auto;background:#f6f6f6;border:1px solid #ccc;padding:10px;">' +
+                            $('<div/>').text(response.data.output).html() + '</pre>';
+                    }
+                    statusSpan.html('<div class="notice notice-success is-dismissible"><p>' + response.data.message + '</p>' + outputHtml + '</div>');
                 } else {
                     statusSpan.html('<div class="notice notice-error is-dismissible"><p>' + response.data.message + '</p></div>');
                 }
