@@ -180,8 +180,34 @@ jQuery(function ($) {
         bindEvents: function() {
             var self = this;
             
+            // Change Source button
+            $('#kolibri24-change-source-btn').on('click', function(e) {
+                e.preventDefault();
+                $('#kolibri24-source-selector').slideDown(300);
+            });
+
+            // Confirm Source button
+            $('#kolibri24-confirm-source-btn').on('click', function(e) {
+                e.preventDefault();
+                var selectedSource = $('input[name="kolibri24-import-source-radio"]:checked').val();
+                self.updateSourceDisplay(selectedSource);
+                $('input[name="kolibri24-import-source-radio"]').prop('disabled', false);
+                $('input[name="kolibri24-import-source-radio"]').each(function() {
+                    $('input[name="kolibri24-import-source"]').val($(this).val());
+                });
+                $('input[name="kolibri24-import-source"]').val(selectedSource);
+                self.handleSourceChange(selectedSource);
+                $('#kolibri24-source-selector').slideUp(300);
+            });
+
+            // Cancel Source button
+            $('#kolibri24-cancel-source-btn').on('click', function(e) {
+                e.preventDefault();
+                $('#kolibri24-source-selector').slideUp(300);
+            });
+
             // Source selection radio buttons
-            $('input[name="kolibri24-import-source"]').on('change', function() {
+            $('input[name="kolibri24-import-source-radio"]').on('change', function() {
                 self.handleSourceChange($(this).val());
             });
             
@@ -258,18 +284,94 @@ jQuery(function ($) {
         /**
          * Handle source selection change
          */
+        updateSourceDisplay: function(source) {
+            var icons = {
+                'kolibri24': 'dashicons-cloud',
+                'remote-url': 'dashicons-admin-links',
+                'upload': 'dashicons-upload',
+                'previous-archive': 'dashicons-archive'
+            };
+
+            var labels = {
+                'kolibri24': 'Download from Kolibri24',
+                'remote-url': 'Download from Remote URL',
+                'upload': 'Upload Local ZIP File',
+                'previous-archive': 'Use Previous Archive'
+            };
+
+            var descriptions = {
+                'kolibri24': 'Download the latest property data directly from the Kolibri24 API.',
+                'remote-url': 'Provide a custom URL to download a ZIP file.',
+                'upload': 'Upload a ZIP file from your computer.',
+                'previous-archive': 'Load a previously downloaded and archived ZIP file.'
+            };
+
+            $('.kolibri24-default-source').empty().html(
+                '<div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">' +
+                '    <span class="dashicons ' + icons[source] + '" style="font-size: 40px; width: 40px; height: 40px; color: #0073aa;"></span>' +
+                '    <div>' +
+                '        <h3 style="margin: 0;">' + labels[source] + '</h3>' +
+                '        <p style="margin: 5px 0 0 0; color: #666;">' + descriptions[source] + '</p>' +
+                '    </div>' +
+                '</div>'
+            );
+        },
+
+        /**
+         * Handle source change
+         */
         handleSourceChange: function(source) {
             var remoteField = $('#kolibri24-remote-url-field');
             var uploadField = $('#kolibri24-file-upload-field');
+            var archiveField = $('#kolibri24-previous-archive-field');
+            var self = this;
 
             remoteField.removeClass('is-open');
             uploadField.removeClass('is-open');
+            archiveField.removeClass('is-open');
 
             if (source === 'remote-url') {
                 remoteField.addClass('is-open');
             } else if (source === 'upload') {
                 uploadField.addClass('is-open');
+            } else if (source === 'previous-archive') {
+                archiveField.addClass('is-open');
+                // Load archives list when previous-archive is selected
+                this.loadPreviousArchives();
             }
+        },
+
+        /**
+         * Load list of previous archives
+         */
+        loadPreviousArchives: function() {
+            var nonce = this.downloadBtn.data('nonce');
+            var archiveSelect = $('#kolibri24-previous-archive');
+
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'kolibri24_get_previous_archives',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success && response.data.archives.length > 0) {
+                        archiveSelect.empty().append('<option value="">-- Select an archive --</option>');
+                        
+                        $.each(response.data.archives, function(index, archive) {
+                            var option = '<option value="' + archive.path + '">' + archive.name + ' (' + archive.count + ' files, ' + archive.date + ')</option>';
+                            archiveSelect.append(option);
+                        });
+                    } else {
+                        archiveSelect.empty().append('<option value="">No archives available</option>');
+                    }
+                },
+                error: function() {
+                    archiveSelect.empty().append('<option value="">Error loading archives</option>');
+                }
+            });
         },
 
         /**
@@ -294,7 +396,7 @@ jQuery(function ($) {
         downloadAndExtract: function() {
             var self = this;
             var nonce = this.downloadBtn.data('nonce');
-            var source = $('input[name="kolibri24-import-source"]:checked').val();
+            var source = $('input[name="kolibri24-import-source"]').val() || 'kolibri24';
             
             // Validate input based on source
             if (source === 'remote-url') {
@@ -309,6 +411,12 @@ jQuery(function ($) {
                     this.showMessage('Please select a ZIP file to upload', 'error', this.statusDiv);
                     return;
                 }
+            } else if (source === 'previous-archive') {
+                var archivePath = $('#kolibri24-previous-archive').val();
+                if (!archivePath) {
+                    this.showMessage('Please select a previous archive', 'error', this.statusDiv);
+                    return;
+                }
             }
 
             // Clear previous messages
@@ -317,7 +425,13 @@ jQuery(function ($) {
 
             // Disable button and show progress
             this.disableDownloadButton();
-            this.showProgress('Downloading and extracting...');
+            
+            // Different message based on source
+            if (source === 'previous-archive') {
+                this.showProgress('Loading archive...');
+            } else {
+                this.showProgress('Downloading and extracting...');
+            }
             this.updateProgress(10);
 
             // Prepare data
@@ -330,6 +444,11 @@ jQuery(function ($) {
             // For remote URL, add URL parameter
             if (source === 'remote-url') {
                 ajaxData.remote_url = $('#kolibri24-remote-url').val();
+            }
+            
+            // For previous archive, add archive path
+            if (source === 'previous-archive') {
+                ajaxData.archive_path = $('#kolibri24-previous-archive').val();
             }
 
             // Make AJAX request
@@ -452,6 +571,23 @@ jQuery(function ($) {
                     '<img src="' + property.image_url + '" alt="' + property.address + '" />' :
                     '<div class="kolibri24-no-image"><span class="dashicons dashicons-admin-home"></span></div>';
                 
+                var updateNotice = '';
+                var changeDetails = '';
+                if (property.changed_fields && property.changed_fields.length) {
+                    changeDetails = '<ul style="margin: 6px 0 0 16px; padding: 0; color: #666;">';
+                    property.changed_fields.forEach(function(change) {
+                        changeDetails += '<li>' + change.field + ': ' + (change.old || '—') + ' → ' + (change.new || '—') + '</li>';
+                    });
+                    changeDetails += '</ul>';
+                }
+
+                if (property.is_updated) {
+                    updateNotice = '<div class="notice-warning" style="background: #fff8e5; border-left: 4px solid #ffb900; padding: 8px; margin: 10px 0; border-radius: 2px;">' +
+                        '<p style="margin: 0; color: #666;"><strong>⚠️ ' + property.update_message + '</strong></p>' +
+                        changeDetails +
+                        '</div>';
+                }
+                
                 html += '<div class="kolibri24-property-item">';
                 html += '  <div class="kolibri24-property-checkbox-container">';
                 html += '    <input type="checkbox" class="kolibri24-property-checkbox" data-record="' + property.record_position + '" id="property-' + property.record_position + '" />';
@@ -460,6 +596,7 @@ jQuery(function ($) {
                 html += '  <div class="kolibri24-property-image">' + imageHtml + '</div>';
                 html += '  <div class="kolibri24-property-details">';
                 html += '    <h3 class="kolibri24-property-id">Position ' + property.record_position + ' - ID: ' + property.property_id + '</h3>';
+                html += updateNotice;
                 html += '    <p class="kolibri24-property-address"><strong>Address:</strong> ' + property.address + '</p>';
                 html += '    <p class="kolibri24-property-city"><strong>City:</strong> ' + property.city + '</p>';
                 html += '    <p class="kolibri24-property-price"><strong>Price:</strong> ' + property.price + '</p>';
@@ -1034,5 +1171,104 @@ jQuery(function ($) {
         e.preventDefault();
         Kolibri24SettingsManager.saveSettings();
     });
+
+    /**
+     * Import History Manager
+     */
+    var Kolibri24HistoryManager = {
+        init: function() {
+            this.bindEvents();
+        },
+
+        bindEvents: function() {
+            var self = this;
+            
+            $(document).on('click', '#kolibri24-history-load-btn', function(e) {
+                e.preventDefault();
+                self.loadHistory();
+            });
+
+            $(document).on('keyup', '#kolibri24-history-search', function() {
+                self.filterHistory();
+            });
+        },
+
+        loadHistory: function() {
+            var nonce = $('#kolibri24-history-load-btn').data('nonce');
+            var statusDiv = $('#kolibri24-history-status');
+
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'kolibri24_get_import_history',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success && response.data.history.length > 0) {
+                        Kolibri24HistoryManager.displayHistory(response.data.history);
+                        statusDiv.html('');
+                    } else {
+                        statusDiv.html('<div class="notice notice-info"><p>' + (response.data.message || 'No import history found.') + '</p></div>');
+                        $('#kolibri24-history-list').html('<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">No imports yet.</td></tr>');
+                    }
+                },
+                error: function() {
+                    statusDiv.html('<div class="notice notice-error"><p>Error loading import history.</p></div>');
+                }
+            });
+        },
+
+        displayHistory: function(history) {
+            var tbody = $('#kolibri24-history-list');
+            tbody.empty();
+
+            $.each(history, function(index, record) {
+                var lastImportedDate = new Date(record.last_imported).toLocaleString();
+                var lastModifiedDate = record.last_modified ? new Date(record.last_modified).toLocaleString() : 'N/A';
+                
+                var row = '<tr>';
+                row += '<td><strong>' + escapeHtml(record.id) + '</strong></td>';
+                row += '<td>' + escapeHtml(record.address) + '</td>';
+                row += '<td>' + lastImportedDate + '</td>';
+                row += '<td>' + lastModifiedDate + '</td>';
+                row += '</tr>';
+                
+                tbody.append(row);
+            });
+        },
+
+        filterHistory: function() {
+            var searchTerm = $('#kolibri24-history-search').val().toLowerCase();
+            var rows = $('#kolibri24-history-list tr');
+
+            rows.each(function() {
+                var text = $(this).text().toLowerCase();
+                if (searchTerm === '' || text.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+    };
+
+    // Initialize Import History Manager if on history tab
+    if ($('#kolibri24-history-load-btn').length > 0) {
+        Kolibri24HistoryManager.init();
+    }
+
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        var map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
 
 });

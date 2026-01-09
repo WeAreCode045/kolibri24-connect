@@ -96,10 +96,9 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 					<a href="?page=kolibri24-properties-import&tab=import" class="nav-tab <?php echo 'import' === $active_tab ? 'nav-tab-active' : ''; ?>">
 						<?php esc_html_e( 'Import', 'kolibri24-connect' ); ?>
 					</a>
-					<a href="?page=kolibri24-properties-import&tab=archive" class="nav-tab <?php echo 'archive' === $active_tab ? 'nav-tab-active' : ''; ?>">
-						<?php esc_html_e( 'Archive', 'kolibri24-connect' ); ?>
-					</a>
-				<a href="?page=kolibri24-properties-import&tab=settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
+				<a href="?page=kolibri24-properties-import&tab=history" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Import History', 'kolibri24-connect' ); ?>
+				</a>
 					<?php esc_html_e( 'Settings', 'kolibri24-connect' ); ?>
 				</a>
 			</nav>
@@ -127,12 +126,36 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 				<!-- Step 1: Select Import Source & Download & Extract -->
 				<div class="card kolibri24-step-1 kolibri24-step-container kolibri24-card-full">
 					<h2><?php esc_html_e( 'Step 1: Select Import Source & Extract Properties', 'kolibri24-connect' ); ?></h2>
-					<div class="kolibri24-source-selection">
+					
+					<!-- Default Kolibri24 Display -->
+					<div class="kolibri24-default-source">
+						<div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+							<span class="dashicons dashicons-cloud" style="font-size: 40px; width: 40px; height: 40px; color: #0073aa;"></span>
+							<div>
+								<h3 style="margin: 0;"><?php esc_html_e( 'Download from Kolibri24', 'kolibri24-connect' ); ?></h3>
+								<p style="margin: 5px 0 0 0; color: #666;"><?php esc_html_e( 'Download the latest property data directly from the Kolibri24 API.', 'kolibri24-connect' ); ?></p>
+							</div>
+						</div>
+						<input type="hidden" name="kolibri24-import-source" value="kolibri24" />
+					</div>
+
+					<!-- Change Source Button -->
+					<div style="margin-bottom: 20px; text-align: center;">
+						<button type="button" id="kolibri24-change-source-btn" class="button button-secondary">
+							<span class="dashicons dashicons-image-rotate" style="margin-right: 5px;"></span>
+							<?php esc_html_e( 'Change Source', 'kolibri24-connect' ); ?>
+						</button>
+					</div>
+
+					<!-- Source Options (Hidden by default) -->
+					<div id="kolibri24-source-selector" class="kolibri24-source-selection" style="display: none; border: 1px solid #ddd; padding: 20px; background: #f9f9f9; border-radius: 4px; margin-bottom: 20px;">
+						<p style="margin-top: 0;"><strong><?php esc_html_e( 'Select a different import source:', 'kolibri24-connect' ); ?></strong></p>
+						
 						<div class="kolibri24-source-options">
 							<div class="kolibri24-source-option">
 								<label>
 									<span class="dashicons dashicons-cloud"></span>
-									<input type="radio" name="kolibri24-import-source" value="kolibri24" checked />
+									<input type="radio" name="kolibri24-import-source-radio" value="kolibri24" checked />
 									<strong><?php esc_html_e( 'Download from Kolibri24', 'kolibri24-connect' ); ?></strong>
 								</label>
 								<p class="description"><?php esc_html_e( 'Download the latest property data directly from the Kolibri24 API.', 'kolibri24-connect' ); ?></p>
@@ -141,7 +164,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 							<div class="kolibri24-source-option">
 								<label>
 									<span class="dashicons dashicons-admin-links"></span>
-									<input type="radio" name="kolibri24-import-source" value="remote-url" />
+									<input type="radio" name="kolibri24-import-source-radio" value="remote-url" />
 									<strong><?php esc_html_e( 'Download from Remote URL', 'kolibri24-connect' ); ?></strong>
 								</label>
 								<p class="description"><?php esc_html_e( 'Provide a custom URL to download a ZIP file.', 'kolibri24-connect' ); ?></p>
@@ -153,7 +176,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 							<div class="kolibri24-source-option">
 								<label>
 									<span class="dashicons dashicons-upload"></span>
-									<input type="radio" name="kolibri24-import-source" value="upload" />
+									<input type="radio" name="kolibri24-import-source-radio" value="upload" />
 									<strong><?php esc_html_e( 'Upload Local ZIP File', 'kolibri24-connect' ); ?></strong>
 								</label>
 								<p class="description"><?php esc_html_e( 'Upload a ZIP file from your computer.', 'kolibri24-connect' ); ?></p>
@@ -162,6 +185,31 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 									<p class="description"><?php esc_html_e( 'Maximum file size: 100MB', 'kolibri24-connect' ); ?></p>
 								</div>
 							</div>
+
+							<div class="kolibri24-source-option">
+								<label>
+									<span class="dashicons dashicons-archive"></span>
+									<input type="radio" name="kolibri24-import-source-radio" value="previous-archive" />
+									<strong><?php esc_html_e( 'Use Previous Archive', 'kolibri24-connect' ); ?></strong>
+								</label>
+								<p class="description"><?php esc_html_e( 'Load a previously downloaded and archived ZIP file.', 'kolibri24-connect' ); ?></p>
+								<div id="kolibri24-previous-archive-field" class="kolibri24-collapsible">
+									<select id="kolibri24-previous-archive" class="regular-text">
+										<option value=""><?php esc_html_e( '-- Select an archive --', 'kolibri24-connect' ); ?></option>
+									</select>
+									<p class="description" id="kolibri24-archive-info"></p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Source Selector Actions -->
+						<div style="margin-top: 15px; text-align: center;">
+							<button type="button" id="kolibri24-confirm-source-btn" class="button button-primary">
+								<?php esc_html_e( 'Confirm Selection', 'kolibri24-connect' ); ?>
+							</button>
+							<button type="button" id="kolibri24-cancel-source-btn" class="button button-secondary">
+								<?php esc_html_e( 'Cancel', 'kolibri24-connect' ); ?>
+							</button>
 						</div>
 					</div>
 
@@ -297,6 +345,39 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 							<button type="button" id="kolibri24-archive-back-btn" class="button button-primary">
 								<?php esc_html_e( 'Back to List', 'kolibri24-connect' ); ?>
 							</button>
+						</div>
+					</div>
+				<?php elseif ( 'history' === $active_tab ) : ?>
+					<!-- Import History Tab -->
+					<div class="card" style="max-width: 100%; margin-top: 20px;">
+						<h2><?php esc_html_e( 'Import History', 'kolibri24-connect' ); ?></h2>
+						<p><?php esc_html_e( 'View all imported properties with their modification dates.', 'kolibri24-connect' ); ?></p>
+						
+						<div id="kolibri24-history-status"></div>
+						
+						<!-- Search and Filter -->
+						<div style="margin: 20px 0; display: flex; gap: 10px; align-items: center;">
+							<input type="text" id="kolibri24-history-search" placeholder="Search by ID or address..." class="regular-text" style="flex: 1; max-width: 400px;" />
+							<button type="button" id="kolibri24-history-load-btn" class="button button-primary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+								<?php esc_html_e( 'Load History', 'kolibri24-connect' ); ?>
+							</button>
+						</div>
+						
+						<!-- History Table -->
+						<div id="kolibri24-history-container" style="overflow-x: auto;">
+							<table class="wp-list-table widefat fixed striped">
+								<thead>
+									<tr>
+										<th style="width: 15%;"><?php esc_html_e( 'Property ID', 'kolibri24-connect' ); ?></th>
+										<th style="width: 45%;"><?php esc_html_e( 'Address', 'kolibri24-connect' ); ?></th>
+										<th style="width: 20%;"><?php esc_html_e( 'Last Imported', 'kolibri24-connect' ); ?></th>
+										<th style="width: 20%;"><?php esc_html_e( 'Last Modified', 'kolibri24-connect' ); ?></th>
+									</tr>
+								</thead>
+								<tbody id="kolibri24-history-list">
+									<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;"><?php esc_html_e( 'Click "Load History" to display imported properties.', 'kolibri24-connect' ); ?></td></tr>
+								</tbody>
+							</table>
 						</div>
 					</div>
 				<?php elseif ( 'settings' === $active_tab ) : ?>

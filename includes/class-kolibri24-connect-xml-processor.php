@@ -273,6 +273,36 @@ if ( ! class_exists( 'Kolibri24_Connect_Xml_Processor' ) ) {
 
 
 		/**
+		 * Extracts detailed property data for comparison
+		 *
+		 * @param DOMXPath $property_xpath XPath instance scoped to a single property.
+		 * @return array
+		 */
+		private function extract_detailed_property_data( $property_xpath ) {
+			$purchase_price = $this->get_xpath_value( $property_xpath, "//Financials/PurchasePrice/text()" );
+			$rent_price     = $this->get_xpath_value( $property_xpath, "//Financials/RentPrice/text()" );
+
+			return array(
+				'address'        => $this->get_xpath_value( $property_xpath, "//Location/Address/AddressLine1/Translation/text()" ),
+				'city'           => $this->get_xpath_value( $property_xpath, "//Location/Address/CityName/Translation/text()" ),
+				'postal_code'    => $this->get_xpath_value( $property_xpath, "//Location/Address/PostalCode/Translation/text()" ),
+				'country'        => $this->get_xpath_value( $property_xpath, "//Location/Address/Country/Translation/text()" ),
+				'status'         => $this->get_xpath_value( $property_xpath, "//PropertyInfo/Status/Translation/text()" ),
+				'purchase_price' => $purchase_price,
+				'rent_price'     => $rent_price,
+				'property_type'  => $this->get_xpath_value( $property_xpath, "//PropertyInfo/Type/Translation/text()" ),
+				'living_area'    => $this->get_xpath_value( $property_xpath, "//Building/Areas/LivingArea/text()" ),
+				'plot_area'      => $this->get_xpath_value( $property_xpath, "//Building/Areas/PlotArea/text()" ),
+				'rooms'          => $this->get_xpath_value( $property_xpath, "//Building/Rooms/RoomCount/text()" ),
+				'bedrooms'       => $this->get_xpath_value( $property_xpath, "//Building/Rooms/BedroomCount/text()" ),
+				'bathrooms'      => $this->get_xpath_value( $property_xpath, "//Building/Rooms/BathroomCount/text()" ),
+				'description'    => $this->get_xpath_value( $property_xpath, "//PropertyInfo/Description/Translation/text()" ),
+				'last_modified'  => $this->get_xpath_value( $property_xpath, "//PropertyInfo/ModificationDateTime/text()" ),
+			);
+		}
+
+
+		/**
 		 * Extract property previews from merged properties.xml file
 		 *
 		 * @param string $merged_file_path Path to merged properties.xml file.
@@ -333,24 +363,36 @@ if ( ! class_exists( 'Kolibri24_Connect_Xml_Processor' ) ) {
 				
 				// Extract data using XPath.
 				$property_id = $this->get_xpath_value( $property_xpath, "//PropertyInfo/PublicReferenceNumber/text()" );
-				$address = $this->get_xpath_value( $property_xpath, "//Location/Address/AddressLine1/Translation/text()" );
-				$city = $this->get_xpath_value( $property_xpath, "//Location/Address/CityName/Translation/text()" );
+				$details     = $this->extract_detailed_property_data( $property_xpath );
 				
-				// Try purchase price first, then rent price.
-				$price = $this->get_xpath_value( $property_xpath, "//Financials/PurchasePrice/text()" );
+				$price = $details['purchase_price'];
 				if ( empty( $price ) ) {
-					$price = $this->get_xpath_value( $property_xpath, "//Financials/RentPrice/text()" );
+					$price = $details['rent_price'];
 				}
-				
+
 				$image_url = $this->get_xpath_value( $property_xpath, "//Attachments/Attachment/URLThumbFile/text()" );
 				
 				$properties[] = array(
 					"record_position" => $i + 1, // 1-based position
 					"property_id"     => $property_id ? $property_id : __( "N/A", "kolibri24-connect" ),
-					"address"         => $address ? $address : __( "N/A", "kolibri24-connect" ),
-					"city"            => $city ? $city : __( "N/A", "kolibri24-connect" ),
+					"address"         => $details['address'] ? $details['address'] : __( "N/A", "kolibri24-connect" ),
+					"city"            => $details['city'] ? $details['city'] : __( "N/A", "kolibri24-connect" ),
+					"postal_code"     => $details['postal_code'] ? $details['postal_code'] : '',
+					"country"         => $details['country'] ? $details['country'] : '',
 					"price"           => $price ? $price : __( "N/A", "kolibri24-connect" ),
+					"purchase_price"  => $details['purchase_price'] ? $details['purchase_price'] : '',
+					"rent_price"      => $details['rent_price'] ? $details['rent_price'] : '',
+					"property_type"   => $details['property_type'] ? $details['property_type'] : '',
+					"status"          => $details['status'] ? $details['status'] : '',
+					"living_area"     => $details['living_area'] ? $details['living_area'] : '',
+					"plot_area"       => $details['plot_area'] ? $details['plot_area'] : '',
+					"rooms"           => $details['rooms'] ? $details['rooms'] : '',
+					"bedrooms"        => $details['bedrooms'] ? $details['bedrooms'] : '',
+					"bathrooms"       => $details['bathrooms'] ? $details['bathrooms'] : '',
+					"description"     => $details['description'] ? $details['description'] : '',
 					"image_url"       => $image_url ? $image_url : "",
+					"last_modified"   => $details['last_modified'] ? $details['last_modified'] : "",
+					"changed_fields"  => array(),
 				);
 			}
 
@@ -571,6 +613,155 @@ if ( ! class_exists( 'Kolibri24_Connect_Xml_Processor' ) ) {
 		public function get_output_file_path() {
 			$upload_dir = wp_upload_dir();
 			return trailingslashit( $upload_dir['basedir'] ) . 'kolibri/properties.xml';
+		}
+
+		/**
+		 * Check if properties have been updated since last import
+		 *
+		 * @param array $current_properties Array of current properties with modification dates.
+		 * @return array Updated properties with update flag.
+		 *
+		 * @since 1.9.0
+		 */
+		public function check_for_updates( $current_properties ) {
+			// Get import history.
+			$history = get_option( 'kolibri24_import_history', array() );
+
+			if ( empty( $history ) ) {
+				return $current_properties;
+			}
+
+			// Check each property for updates.
+			foreach ( $current_properties as &$property ) {
+				$property_id = $property['property_id'] ?? '';
+
+				// Check if this property was previously imported.
+				if ( isset( $history[ $property_id ] ) && ! empty( $property['last_modified'] ) ) {
+					$last_imported = $history[ $property_id ]['last_modified'] ?? '';
+					$current_modified = $property['last_modified'];
+
+					// Compare modification dates.
+					if ( ! empty( $last_imported ) && strtotime( $current_modified ) > strtotime( $last_imported ) ) {
+						$property['is_updated'] = true;
+						$property['update_message'] = __( 'Data updated after last import', 'kolibri24-connect' );
+					} else {
+						$property['is_updated'] = false;
+					}
+				} else {
+					$property['is_updated'] = false;
+				}
+			}
+
+			return $current_properties;
+		}
+
+		/**
+		 * Compare current properties against last import to detect field-level changes
+		 *
+		 * @param array $current_properties Current property previews including detailed fields.
+		 * @return array
+		 */
+		public function compare_with_last_import( $current_properties ) {
+			$history_details = get_option( 'kolibri24_import_history_details', array() );
+
+			if ( empty( $history_details ) ) {
+				return $current_properties;
+			}
+
+			$fields = array(
+				'address'        => $this->get_field_display_name( 'address' ),
+				'city'           => $this->get_field_display_name( 'city' ),
+				'postal_code'    => $this->get_field_display_name( 'postal_code' ),
+				'country'        => $this->get_field_display_name( 'country' ),
+				'purchase_price' => $this->get_field_display_name( 'purchase_price' ),
+				'rent_price'     => $this->get_field_display_name( 'rent_price' ),
+				'property_type'  => $this->get_field_display_name( 'property_type' ),
+				'status'         => $this->get_field_display_name( 'status' ),
+				'living_area'    => $this->get_field_display_name( 'living_area' ),
+				'plot_area'      => $this->get_field_display_name( 'plot_area' ),
+				'rooms'          => $this->get_field_display_name( 'rooms' ),
+				'bedrooms'       => $this->get_field_display_name( 'bedrooms' ),
+				'bathrooms'      => $this->get_field_display_name( 'bathrooms' ),
+				'description'    => $this->get_field_display_name( 'description' ),
+				'last_modified'  => $this->get_field_display_name( 'last_modified' ),
+			);
+
+			foreach ( $current_properties as &$property ) {
+				$property_id = $property['property_id'] ?? '';
+				$property['changed_fields'] = array();
+
+				if ( empty( $property_id ) || ! isset( $history_details[ $property_id ] ) ) {
+					continue;
+				}
+
+				$previous = $history_details[ $property_id ];
+
+				foreach ( $fields as $field_key => $label ) {
+					$current_value  = isset( $property[ $field_key ] ) ? $property[ $field_key ] : '';
+					$previous_value = isset( $previous[ $field_key ] ) ? $previous[ $field_key ] : '';
+
+					if ( $current_value === '' && $previous_value === '' ) {
+						continue;
+					}
+
+					if ( $current_value !== $previous_value ) {
+						$property['changed_fields'][] = array(
+							'field' => $label,
+							'old'   => $previous_value,
+							'new'   => $current_value,
+						);
+					}
+				}
+
+				if ( ! empty( $property['changed_fields'] ) ) {
+					$property['is_updated']    = true;
+					$property['update_message'] = __( 'Fields changed since last import', 'kolibri24-connect' );
+				}
+			}
+
+			return $current_properties;
+		}
+
+		/**
+		 * Friendly label for field keys
+		 *
+		 * @param string $field_key Field key.
+		 * @return string
+		 */
+		private function get_field_display_name( $field_key ) {
+			switch ( $field_key ) {
+				case 'status':
+					return __( 'Status', 'kolibri24-connect' );
+				case 'postal_code':
+					return __( 'Postal Code', 'kolibri24-connect' );
+				case 'purchase_price':
+					return __( 'Purchase Price', 'kolibri24-connect' );
+				case 'rent_price':
+					return __( 'Rent Price', 'kolibri24-connect' );
+				case 'property_type':
+					return __( 'Property Type', 'kolibri24-connect' );
+				case 'living_area':
+					return __( 'Living Area', 'kolibri24-connect' );
+				case 'plot_area':
+					return __( 'Plot Area', 'kolibri24-connect' );
+				case 'rooms':
+					return __( 'Rooms', 'kolibri24-connect' );
+				case 'bedrooms':
+					return __( 'Bedrooms', 'kolibri24-connect' );
+				case 'bathrooms':
+					return __( 'Bathrooms', 'kolibri24-connect' );
+				case 'description':
+					return __( 'Description', 'kolibri24-connect' );
+				case 'last_modified':
+					return __( 'Last Modified', 'kolibri24-connect' );
+				case 'country':
+					return __( 'Country', 'kolibri24-connect' );
+				case 'city':
+					return __( 'City', 'kolibri24-connect' );
+				case 'address':
+				default:
+					return __( 'Address', 'kolibri24-connect' );
+			}
 		}
 	}
 }

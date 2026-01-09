@@ -23,6 +23,54 @@ add_action( 'pmxi_after_xml_import', function( $import_id, $import ) {
             );
             // Store stats in a transient for later display (e.g. in admin UI)
             set_transient( 'kolibri24_last_import_stats', $stats, 60 * 60 ); // 1 hour
+            
+            // Save import history with preview data
+            $preview_data = get_option( 'kolibri24_preview_data', array() );
+            if ( ! empty( $preview_data ) ) {
+                $history         = get_option( 'kolibri24_import_history', array() );
+                $history_details = get_option( 'kolibri24_import_history_details', array() );
+
+                if ( ! is_array( $history ) ) {
+                    $history = array();
+                }
+                if ( ! is_array( $history_details ) ) {
+                    $history_details = array();
+                }
+                
+                // Add each preview record to history
+                foreach ( $preview_data as $property ) {
+                    if ( isset( $property['property_id'] ) ) {
+                        $history[ $property['property_id'] ] = array(
+                            'id'             => $property['property_id'],
+                            'address'        => $property['address'] ?? 'N/A',
+                            'last_imported'  => current_time( 'mysql' ),
+                            'last_modified'  => $property['last_modified'] ?? '',
+                        );
+
+                        $history_details[ $property['property_id'] ] = array(
+                            'address'        => $property['address'] ?? '',
+                            'city'           => $property['city'] ?? '',
+                            'postal_code'    => $property['postal_code'] ?? '',
+                            'country'        => $property['country'] ?? '',
+                            'status'         => $property['status'] ?? '',
+                            'purchase_price' => $property['purchase_price'] ?? '',
+                            'rent_price'     => $property['rent_price'] ?? '',
+                            'property_type'  => $property['property_type'] ?? '',
+                            'living_area'    => $property['living_area'] ?? '',
+                            'plot_area'      => $property['plot_area'] ?? '',
+                            'rooms'          => $property['rooms'] ?? '',
+                            'bedrooms'       => $property['bedrooms'] ?? '',
+                            'bathrooms'      => $property['bathrooms'] ?? '',
+                            'description'    => $property['description'] ?? '',
+                            'last_modified'  => $property['last_modified'] ?? '',
+                        );
+                    }
+                }
+                
+                update_option( 'kolibri24_import_history', $history );
+                update_option( 'kolibri24_import_history_details', $history_details );
+            }
+            
             // Optionally: do_action( 'kolibri24_after_import', $import_id, $import, $stats );
         }
     }
