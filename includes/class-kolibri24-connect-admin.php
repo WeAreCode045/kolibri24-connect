@@ -22,14 +22,47 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 			add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-		}
+		add_action( 'admin_init', array( $this, 'register_settings' ) );
+	}
 
-		/**
-		 * Add admin menu page
-		 *
-		 * @since 1.0.0
-		 */
-		public function add_admin_menu() {
+	/**
+	 * Register settings with WordPress Settings API
+	 *
+	 * @since 1.1.0
+	 */
+	public function register_settings() {
+		register_setting(
+			'kolibri24_settings_group',
+			'kolibri24_api_url',
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => array( $this, 'sanitize_api_url' ),
+				'show_in_rest'      => false,
+			)
+		);
+	}
+
+	/**
+	 * Sanitize API URL option
+	 *
+	 * @param string $value The URL value to sanitize.
+	 * @return string Sanitized URL.
+	 *
+	 * @since 1.1.0
+	 */
+	public function sanitize_api_url( $value ) {
+		if ( empty( $value ) ) {
+			return '';
+		}
+		return esc_url( $value );
+	}
+
+	/**
+	 * Add admin menu page
+	 *
+	 * @since 1.0.0
+	 */
+	public function add_admin_menu() {
 			add_menu_page(
 				__( 'Kolibri Properties Import', 'kolibri24-connect' ), // Page title.
 				__( 'Kolibri Import', 'kolibri24-connect' ),            // Menu title.
