@@ -598,9 +598,8 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 						   array(
 							   'message'   => __( 'WP All Import executed successfully.', 'kolibri24-connect' ),
 							   'import_id' => $import_id,
-							'output'    => $output,
-						)
-					);
+						   )
+					   );
 				} catch ( Exception $e ) {
 					wp_send_json_error(
 						array(
