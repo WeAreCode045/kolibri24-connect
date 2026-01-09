@@ -1,12 +1,45 @@
 /**
  * Kolibri24 Connect Admin JavaScript
  * 
- * Handles AJAX processing for property import functionality with preview/selection.
+ * Handles AJAX processing for property import functionality with step-based navigation.
  */
 jQuery(function ($) {
     'use strict';
 
-    // Event delegation for Run WP All Import button
+    // Step navigation state
+    var currentStep = 1;
+
+    function goToStep(stepNum) {
+        // Hide all steps
+        $('.kolibri24-step-container').hide();
+        
+        // Show target step
+        $('.kolibri24-step-' + stepNum).show();
+        
+        // Update step indicator
+        $('.kolibri24-step-badge').removeClass('kolibri24-step-active');
+        $('.kolibri24-step-badge[data-step="' + stepNum + '"]').addClass('kolibri24-step-active');
+        
+        currentStep = stepNum;
+        
+        // Scroll to top of step
+        $('html, body').animate({
+            scrollTop: $('.kolibri24-step-indicator').offset().top - 50
+        }, 300);
+    }
+
+    // Back buttons
+    $(document).on('click', '#kolibri24-step-2-prev-btn', function(e) {
+        e.preventDefault();
+        goToStep(1);
+    });
+
+    $(document).on('click', '#kolibri24-step-3-prev-btn', function(e) {
+        e.preventDefault();
+        goToStep(2);
+    });
+
+    // Run Import button with address confirmation
     $(document).on('click', '#kolibri24-run-import-btn', function(e) {
         e.preventDefault();
         
@@ -88,7 +121,7 @@ jQuery(function ($) {
                         pollProcessingUrl();
                     }
                 } else {
-                    showMessage('No record positions selected. Please download and select records first.', 'warning');
+                    alert('No record positions selected. Please go back to Step 2 and select records.');
                 }
             },
             error: function() {
@@ -402,13 +435,10 @@ jQuery(function ($) {
             // Render property list
             this.renderPropertyList(data.properties);
             
-            // Show step 2
-            this.step2Container.slideDown();
-            
-            // Scroll to property list
-            $('html, body').animate({
-                scrollTop: this.step2Container.offset().top - 50
-            }, 500);
+            // Navigate to Step 2
+            setTimeout(function() {
+                goToStep(2);
+            }, 1000);
         },
 
         /**
@@ -534,12 +564,10 @@ jQuery(function ($) {
             
             this.showMessage(message, 'success', this.mergeStatusDiv);
             
-            // Scroll to run import section
+            // Auto-navigate to Step 3
             setTimeout(function() {
-                $('html, body').animate({
-                    scrollTop: $('.kolibri24-run-import-section').offset().top - 50
-                }, 500);
-            }, 500);
+                goToStep(3);
+            }, 1000);
         },
 
         /**

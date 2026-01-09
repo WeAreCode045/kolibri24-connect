@@ -109,135 +109,159 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 				<?php 
 					$props_info = get_option( 'kolibri24_properties_info' );
 				?>
-				   <div class="card kolibri24-card-full" style="margin-bottom: 20px;">
-					<h2><?php esc_html_e( 'Current Properties File', 'kolibri24-connect' ); ?></h2>
-					<?php if ( is_array( $props_info ) && ! empty( $props_info['output_file'] ) ) : ?>
-						<ul>
-							<li>
-								<strong><?php esc_html_e( 'Number of properties:', 'kolibri24-connect' ); ?></strong>
-								<?php echo esc_html( (string) ( $props_info['total_properties'] ?? 0 ) ); ?>
-							</li>
-							<li>
-								<strong><?php esc_html_e( 'Created:', 'kolibri24-connect' ); ?></strong>
-								<?php 
-									$ts = intval( $props_info['created_at'] ?? 0 );
-									echo esc_html( $ts ? date_i18n( 'Y-m-d H:i', $ts ) : __( 'N/A', 'kolibri24-connect' ) );
-								?>
-							</li>
-							<li>
-								<strong><?php esc_html_e( 'Source archive:', 'kolibri24-connect' ); ?></strong>
-								<?php echo esc_html( $props_info['archive_name'] ?? __( 'Unknown', 'kolibri24-connect' ) ); ?>
-							</li>
-							<li>
-								<strong><?php esc_html_e( 'Output path:', 'kolibri24-connect' ); ?></strong>
-								<?php echo esc_html( $props_info['output_file'] ); ?>
-							</li>
-						</ul>
-					<?php else : ?>
-						<p><?php esc_html_e( 'No merged properties file found yet. Complete Step 1 and Step 2 to generate properties.xml.', 'kolibri24-connect' ); ?></p>
-					<?php endif; ?>
-					<?php if ( is_array( $props_info ) && ! empty( $props_info['output_file'] ) ) : ?>
-						   <div class="kolibri24-properties-actions">
-							   <button type="button" id="kolibri24-run-import-btn" class="button button-primary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
-								   <span class="dashicons dashicons-update"></span>
-								   <?php esc_html_e( 'Run WP All Import', 'kolibri24-connect' ); ?>
-							   </button>
-							   <div id="kolibri24-run-import-status" style="margin-top:10px;"></div>
-						   </div>
-					<?php endif; ?>
+				<!-- Step Navigation Indicator -->
+				<div class="kolibri24-step-indicator" style="margin-bottom: 30px; text-align: center;">
+					<span class="kolibri24-step-badge kolibri24-step-active" data-step="1">
+						<strong>Step 1:</strong> Extract
+					</span>
+					<span class="kolibri24-step-separator">→</span>
+					<span class="kolibri24-step-badge" data-step="2">
+						<strong>Step 2:</strong> Select
+					</span>
+					<span class="kolibri24-step-separator">→</span>
+					<span class="kolibri24-step-badge" data-step="3">
+						<strong>Step 3:</strong> Import
+					</span>
 				</div>
+
 				<!-- Step 1: Select Import Source & Download & Extract -->
-				   <div class="card kolibri24-step-1 kolibri24-card-full">
+				<div class="card kolibri24-step-1 kolibri24-step-container kolibri24-card-full">
 					<h2><?php esc_html_e( 'Step 1: Select Import Source & Extract Properties', 'kolibri24-connect' ); ?></h2>
-				<div class="kolibri24-source-selection">
-					<div class="kolibri24-source-options">
-						<div class="kolibri24-source-option">
-							<label>
-								<span class="dashicons dashicons-cloud"></span>
-								<input type="radio" name="kolibri24-import-source" value="kolibri24" checked />
-								<strong><?php esc_html_e( 'Download from Kolibri24', 'kolibri24-connect' ); ?></strong>
-							</label>
-							<p class="description"><?php esc_html_e( 'Download the latest property data directly from the Kolibri24 API.', 'kolibri24-connect' ); ?></p>
-						</div>
+					<div class="kolibri24-source-selection">
+						<div class="kolibri24-source-options">
+							<div class="kolibri24-source-option">
+								<label>
+									<span class="dashicons dashicons-cloud"></span>
+									<input type="radio" name="kolibri24-import-source" value="kolibri24" checked />
+									<strong><?php esc_html_e( 'Download from Kolibri24', 'kolibri24-connect' ); ?></strong>
+								</label>
+								<p class="description"><?php esc_html_e( 'Download the latest property data directly from the Kolibri24 API.', 'kolibri24-connect' ); ?></p>
+							</div>
 
-						<div class="kolibri24-source-option">
-							<label>
-								<span class="dashicons dashicons-admin-links"></span>
-								<input type="radio" name="kolibri24-import-source" value="remote-url" />
-								<strong><?php esc_html_e( 'Download from Remote URL', 'kolibri24-connect' ); ?></strong>
-							</label>
-							<p class="description"><?php esc_html_e( 'Provide a custom URL to download a ZIP file.', 'kolibri24-connect' ); ?></p>
-							<div id="kolibri24-remote-url-field" class="kolibri24-collapsible">
-								<input type="url" id="kolibri24-remote-url" class="regular-text" placeholder="https://example.com/properties.zip" />
+							<div class="kolibri24-source-option">
+								<label>
+									<span class="dashicons dashicons-admin-links"></span>
+									<input type="radio" name="kolibri24-import-source" value="remote-url" />
+									<strong><?php esc_html_e( 'Download from Remote URL', 'kolibri24-connect' ); ?></strong>
+								</label>
+								<p class="description"><?php esc_html_e( 'Provide a custom URL to download a ZIP file.', 'kolibri24-connect' ); ?></p>
+								<div id="kolibri24-remote-url-field" class="kolibri24-collapsible">
+									<input type="url" id="kolibri24-remote-url" class="regular-text" placeholder="https://example.com/properties.zip" />
+								</div>
+							</div>
+
+							<div class="kolibri24-source-option">
+								<label>
+									<span class="dashicons dashicons-upload"></span>
+									<input type="radio" name="kolibri24-import-source" value="upload" />
+									<strong><?php esc_html_e( 'Upload Local ZIP File', 'kolibri24-connect' ); ?></strong>
+								</label>
+								<p class="description"><?php esc_html_e( 'Upload a ZIP file from your computer.', 'kolibri24-connect' ); ?></p>
+								<div id="kolibri24-file-upload-field" class="kolibri24-collapsible">
+									<input type="file" id="kolibri24-file-upload" accept=".zip" />
+									<p class="description"><?php esc_html_e( 'Maximum file size: 100MB', 'kolibri24-connect' ); ?></p>
+								</div>
 							</div>
 						</div>
+					</div>
 
-						<div class="kolibri24-source-option">
-							<label>
-								<span class="dashicons dashicons-upload"></span>
-								<input type="radio" name="kolibri24-import-source" value="upload" />
-								<strong><?php esc_html_e( 'Upload Local ZIP File', 'kolibri24-connect' ); ?></strong>
-							</label>
-							<p class="description"><?php esc_html_e( 'Upload a ZIP file from your computer.', 'kolibri24-connect' ); ?></p>
-							<div id="kolibri24-file-upload-field" class="kolibri24-collapsible">
-								<input type="file" id="kolibri24-file-upload" accept=".zip" />
-								<p class="description"><?php esc_html_e( 'Maximum file size: 100MB', 'kolibri24-connect' ); ?></p>
-							</div>
+					<div id="kolibri24-status-messages"></div>
+					
+					<div id="kolibri24-progress" style="display:none;">
+						<div class="kolibri24-progress-bar">
+							<div class="kolibri24-progress-fill"></div>
 						</div>
+						<p class="kolibri24-progress-text"></p>
+					</div>
+
+					<!-- Step 1 Actions -->
+					<div class="kolibri24-step-actions" style="margin-top: 20px; text-align: center;">
+						<button type="button" id="kolibri24-download-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+							<span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
+							<?php esc_html_e( 'Download & Extract Properties', 'kolibri24-connect' ); ?>
+						</button>
 					</div>
 				</div>
 
-				<!-- Download & Extract Button -->
-				<div class="kolibri24-actions">
-					<button type="button" id="kolibri24-download-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>">
-						<span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
-						<?php esc_html_e( 'Download & Extract Properties', 'kolibri24-connect' ); ?>
-					</button>
+				<!-- Step 2: Property Selection (Hidden initially) -->
+				<div class="card kolibri24-step-2 kolibri24-step-container kolibri24-card-full" style="display:none;">
+					<h2><?php esc_html_e( 'Step 2: Select Records to Import', 'kolibri24-connect' ); ?></h2>
+					<p><?php esc_html_e( 'All properties have been merged. Select the record positions you want to import via WP All Import.', 'kolibri24-connect' ); ?></p>
+					
+					<div class="kolibri24-selection-controls">
+						<label>
+							<input type="checkbox" id="kolibri24-select-all" />
+							<strong><?php esc_html_e( 'Select All', 'kolibri24-connect' ); ?></strong>
+						</label>
+						<span class="kolibri24-selection-count"></span>
+					</div>
+
+					<div id="kolibri24-property-list" class="kolibri24-property-grid"></div>
+
+					<div id="kolibri24-merge-status"></div>
+
+					<!-- Step 2 Actions -->
+					<div class="kolibri24-step-actions" style="margin-top: 20px; text-align: center;">
+						<button type="button" id="kolibri24-step-2-prev-btn" class="button button-secondary">
+							<?php esc_html_e( '← Back', 'kolibri24-connect' ); ?>
+						</button>
+						<button type="button" id="kolibri24-merge-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>" disabled>
+							<span class="dashicons dashicons-database-import" style="margin-top: 3px;"></span>
+							<?php esc_html_e( 'Save & Continue →', 'kolibri24-connect' ); ?>
+						</button>
+					</div>
 				</div>
 
-						<div id="kolibri24-status-messages"></div>
-						
-						<div id="kolibri24-progress" style="display:none;">
-							<div class="kolibri24-progress-bar">
-								<div class="kolibri24-progress-fill"></div>
-							</div>
-							<p class="kolibri24-progress-text"></p>
-						</div>
+				<!-- Step 3: Confirm & Import (Hidden initially) -->
+				<div class="card kolibri24-step-3 kolibri24-step-container kolibri24-card-full" style="display:none;">
+					<h2><?php esc_html_e( 'Step 3: Confirm & Start Import', 'kolibri24-connect' ); ?></h2>
+					<p><?php esc_html_e( 'Review your selection and start the WP All Import process.', 'kolibri24-connect' ); ?></p>
+					
+					<!-- Properties Info Display -->
+					<div class="kolibri24-run-import-section">
+						<h3><?php esc_html_e( 'Merged Properties Information', 'kolibri24-connect' ); ?></h3>
+						<?php $props_info = get_option( 'kolibri24_properties_info' ); ?>
+						<?php if ( is_array( $props_info ) && ! empty( $props_info ) ) : ?>
+							<ul style="margin: 15px 0;">
+								<li>
+									<strong><?php esc_html_e( 'Total properties in file:', 'kolibri24-connect' ); ?></strong>
+									<?php echo intval( $props_info['total_properties'] ?? 0 ); ?>
+								</li>
+								<li>
+									<strong><?php esc_html_e( 'Source archive:', 'kolibri24-connect' ); ?></strong>
+									<?php echo esc_html( $props_info['archive_name'] ?? __( 'Unknown', 'kolibri24-connect' ) ); ?>
+								</li>
+								<li>
+									<strong><?php esc_html_e( 'Output path:', 'kolibri24-connect' ); ?></strong>
+									<?php echo esc_html( $props_info['output_file'] ); ?>
+								</li>
+							</ul>
+						<?php else : ?>
+							<p><?php esc_html_e( 'No merged properties file found. Complete Steps 1 and 2 first.', 'kolibri24-connect' ); ?></p>
+						<?php endif; ?>
 					</div>
 
-					<!-- Step 2: Property Selection (Hidden initially) -->
-					   <div class="card kolibri24-step-2 kolibri24-card-full" style="margin-top: 20px; display:none;">
-						<h2><?php esc_html_e( 'Step 2: Select Records to Import', 'kolibri24-connect' ); ?></h2>
-						<p><?php esc_html_e( 'All properties have been merged. Select the record positions you want to import via WP All Import.', 'kolibri24-connect' ); ?></p>
-						
-						<div class="kolibri24-selection-controls">
-							<label>
-								<input type="checkbox" id="kolibri24-select-all" />
-								<strong><?php esc_html_e( 'Select All', 'kolibri24-connect' ); ?></strong>
-							</label>
-							<span class="kolibri24-selection-count"></span>
-						</div>
+					<div id="kolibri24-run-import-status" style="margin-top: 15px;"></div>
 
-						<div id="kolibri24-property-list" class="kolibri24-property-grid"></div>
-
-						<div class="kolibri24-merge-actions">
-							<button type="button" id="kolibri24-merge-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>" disabled>
-								<span class="dashicons dashicons-database-import" style="margin-top: 3px;"></span>
-								<?php esc_html_e( 'Save Selected Records for Import', 'kolibri24-connect' ); ?>
+					<!-- Step 3 Actions -->
+					<div class="kolibri24-step-actions" style="margin-top: 20px; text-align: center;">
+						<button type="button" id="kolibri24-step-3-prev-btn" class="button button-secondary">
+							<?php esc_html_e( '← Back', 'kolibri24-connect' ); ?>
+						</button>
+						<?php if ( is_array( $props_info ) && ! empty( $props_info['output_file'] ) ) : ?>
+							<button type="button" id="kolibri24-run-import-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+								<span class="dashicons dashicons-update" style="margin-top: 3px;"></span>
+								<?php esc_html_e( 'Start WP All Import →', 'kolibri24-connect' ); ?>
 							</button>
-							<button type="button" id="kolibri24-cancel-btn" class="button button-secondary">
-								<?php esc_html_e( 'Cancel', 'kolibri24-connect' ); ?>
-							</button>
-						</div>
-
-						<div id="kolibri24-merge-status"></div>
+						<?php endif; ?>
 					</div>
+				</div>
 
-					<!-- Info Card -->
-					<div class="card" style="max-width: 800px; margin-top: 20px;">
-						<h3><?php esc_html_e( 'Process Information', 'kolibri24-connect' ); ?></h3>
-						<ul>
-							<li><?php esc_html_e( 'ZIP file will be downloaded from Kolibri24 API', 'kolibri24-connect' ); ?></li>
+				<!-- Info Card -->
+				<div class="card" style="max-width: 800px; margin-top: 30px;">
+					<h3><?php esc_html_e( 'Process Information', 'kolibri24-connect' ); ?></h3>
+					<ul>
+						<li><?php esc_html_e( 'ZIP file will be downloaded from Kolibri24 API', 'kolibri24-connect' ); ?></li>
 							<li><?php esc_html_e( 'Files are stored in dated folders for archival purposes', 'kolibri24-connect' ); ?></li>
 							<li><?php esc_html_e( 'You can select which properties to include in the merge', 'kolibri24-connect' ); ?></li>
 							<li><?php esc_html_e( 'Selected properties are merged into a single properties.xml file', 'kolibri24-connect' ); ?></li>
@@ -389,7 +413,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 		 * @param    string $hook_suffix The current admin page hook suffix.
 		 */
 		public function enqueue_styles( $hook_suffix ) {
-			wp_enqueue_style( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/css/admin.css', array(), '1.0.0', 'all' );
+			wp_enqueue_style( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/css/admin.css', array(), '1.1.0', 'all' );
 		}
 
 		/**
@@ -399,7 +423,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 		 * @param    string $hook_suffix The current admin page hook suffix.
 		 */
 		public function enqueue_scripts( $hook_suffix ) {
-		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.2.6', true );
+		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.3.0', true );
 			// Localize script with AJAX data.
 			wp_localize_script(
 				'kolibri24-connect-admin',

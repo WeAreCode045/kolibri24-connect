@@ -2,6 +2,67 @@
  * Kolibri24 Connect Admin Styles
  */
 
+/* Step navigation indicator */
+.kolibri24-step-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 30px 0;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.kolibri24-step-badge {
+    padding: 10px 15px;
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    color: #666;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.kolibri24-step-badge:hover {
+    border-color: #2271b1;
+}
+
+.kolibri24-step-badge.kolibri24-step-active {
+    background: #2271b1;
+    color: white;
+    border-color: #2271b1;
+    box-shadow: 0 2px 4px rgba(34, 113, 177, 0.2);
+}
+
+.kolibri24-step-separator {
+    color: #999;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.kolibri24-step-container {
+    margin-top: 30px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+}
+
+.kolibri24-step-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+.kolibri24-step-actions .button {
+    min-width: 150px;
+}
+
 /* Import container */
 .kolibri24-import-container {
     margin-top: 20px;
