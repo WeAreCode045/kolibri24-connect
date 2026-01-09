@@ -109,7 +109,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 				<?php 
 					$props_info = get_option( 'kolibri24_properties_info' );
 				?>
-				<div class="card kolibri24-card-narrow" style="margin-bottom: 20px;">
+				   <div class="card kolibri24-card-full" style="margin-bottom: 20px;">
 					<h2><?php esc_html_e( 'Current Properties File', 'kolibri24-connect' ); ?></h2>
 					<?php if ( is_array( $props_info ) && ! empty( $props_info['output_file'] ) ) : ?>
 						<ul>
@@ -137,17 +137,17 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 						<p><?php esc_html_e( 'No merged properties file found yet. Complete Step 1 and Step 2 to generate properties.xml.', 'kolibri24-connect' ); ?></p>
 					<?php endif; ?>
 					<?php if ( is_array( $props_info ) && ! empty( $props_info['output_file'] ) ) : ?>
-						<div class="kolibri24-properties-actions">
-							<button type="button" id="kolibri24-run-import-btn" class="button button-primary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
-								<span class="dashicons dashicons-update"></span>
-								<?php esc_html_e( 'Run WP All Import', 'kolibri24-connect' ); ?>
-							</button>
-							<span id="kolibri24-run-import-status"></span>
-						</div>
+						   <div class="kolibri24-properties-actions">
+							   <button type="button" id="kolibri24-run-import-btn" class="button button-primary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+								   <span class="dashicons dashicons-update"></span>
+								   <?php esc_html_e( 'Run WP All Import', 'kolibri24-connect' ); ?>
+							   </button>
+							   <div id="kolibri24-run-import-status" style="margin-top:10px;"></div>
+						   </div>
 					<?php endif; ?>
 				</div>
 				<!-- Step 1: Select Import Source & Download & Extract -->
-				<div class="card kolibri24-step-1 kolibri24-card-narrow">
+				   <div class="card kolibri24-step-1 kolibri24-card-full">
 					<h2><?php esc_html_e( 'Step 1: Select Import Source & Extract Properties', 'kolibri24-connect' ); ?></h2>
 				<div class="kolibri24-source-selection">
 					<div class="kolibri24-source-options">
@@ -206,7 +206,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 					</div>
 
 					<!-- Step 2: Property Selection (Hidden initially) -->
-					<div class="card kolibri24-step-2" style="max-width: 100%; margin-top: 20px; display:none;">
+					   <div class="card kolibri24-step-2 kolibri24-card-full" style="margin-top: 20px; display:none;">
 						<h2><?php esc_html_e( 'Step 2: Select Properties to Merge', 'kolibri24-connect' ); ?></h2>
 						<p><?php esc_html_e( 'Select the properties you want to merge into the final properties.xml file.', 'kolibri24-connect' ); ?></p>
 						
