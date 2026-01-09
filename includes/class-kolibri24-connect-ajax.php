@@ -584,14 +584,14 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			}
 			
 			// Execute WP-CLI command to run the import.
-			   $command = sprintf( 'wp all-import run %d --force-run --allow-root', $import_id );
+			   $command = sprintf( 'wp all-import run %d', $import_id );
 			
 			// Check if WP_CLI is available (for direct execution).
 			   if ( class_exists( 'WP_CLI' ) ) {
 				   try {
 					   // Run the import via WP-CLI class with --force-run.
 					   ob_start();
-					   WP_CLI::runcommand( "all-import run {$import_id} --force-run" );
+					   WP_CLI::runcommand( "all-import run {$import_id}" );
 					   $output = ob_get_clean();
 
 					   wp_send_json_success(
@@ -613,24 +613,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 					);
 				}
 			} else {
-				// Fallback: attempt via shell_exec if WP_CLI class is not available.
-				$output = shell_exec( escapeshellcmd( $command ) . ' 2>&1' );
-				
-				if ( null !== $output ) {
-					wp_send_json_success(
-						array(
-							'message'   => __( 'WP All Import executed successfully.', 'kolibri24-connect' ),
-							'import_id' => $import_id,
-							'output'    => $output,
-						)
-					);
-				} else {
-					wp_send_json_error(
-						array(
-							'message' => __( 'WP All Import execution failed. WP-CLI may not be available on this server.', 'kolibri24-connect' ),
-						)
-					);
-				}
+				   // No shell_exec fallback. Only WP_CLI::runcommand is supported.
 			}
 		}
 
