@@ -591,7 +591,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				   try {
 					   // Run the import via WP-CLI class with --force-run.
 					   ob_start();
-					   WP_CLI::runcommand( "all-import run {$import_id}" );
+					   WP_CLI::runcommand( "all-import run {$import_id} --force-run" );
 					   $output = ob_get_clean();
 
 					   wp_send_json_success(

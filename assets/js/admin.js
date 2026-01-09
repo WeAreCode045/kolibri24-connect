@@ -920,15 +920,16 @@ jQuery(function ($) {
                 nonce: nonce
             },
             success: function(response) {
+                var message = (response && response.data && response.data.message) ? response.data.message : (response && response.message ? response.message : 'Unknown error');
                 if (response.success) {
                     var outputHtml = '';
-                    if (response.data.output) {
+                    if (response.data && response.data.output) {
                         outputHtml = '<pre style="max-height:300px;overflow:auto;background:#f6f6f6;border:1px solid #ccc;padding:10px;">' +
                             $('<div/>').text(response.data.output).html() + '</pre>';
                     }
-                    statusSpan.html('<div class="notice notice-success is-dismissible"><p>' + response.data.message + '</p>' + outputHtml + '</div>');
+                    statusSpan.html('<div class="notice notice-success is-dismissible"><p>' + message + '</p>' + outputHtml + '</div>');
                 } else {
-                    statusSpan.html('<div class="notice notice-error is-dismissible"><p>' + response.data.message + '</p></div>');
+                    statusSpan.html('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');
                 }
             },
             error: function() {
