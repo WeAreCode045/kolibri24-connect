@@ -304,6 +304,46 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 											</p>
 										</td>
 									</tr>
+									<tr>
+										<th scope="row">
+											<label for="kolibri24-trigger-url">
+												<?php esc_html_e( 'WP All Import Trigger URL', 'kolibri24-connect' ); ?>
+											</label>
+										</th>
+										<td>
+											<input 
+												type="url" 
+												id="kolibri24-trigger-url" 
+												name="kolibri24_trigger_url" 
+												class="regular-text" 
+												placeholder="https://example.com/..." 
+												value="<?php echo esc_attr( get_option( 'kolibri24_trigger_url' ) ); ?>"
+											/>
+											<p class="description">
+												<?php esc_html_e( 'The URL to trigger WP All Import. This URL is called first to initiate the import process.', 'kolibri24-connect' ); ?>
+											</p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row">
+											<label for="kolibri24-processing-url">
+												<?php esc_html_e( 'WP All Import Processing URL', 'kolibri24-connect' ); ?>
+											</label>
+										</th>
+										<td>
+											<input 
+												type="url" 
+												id="kolibri24-processing-url" 
+												name="kolibri24_processing_url" 
+												class="regular-text" 
+												placeholder="https://example.com/..." 
+												value="<?php echo esc_attr( get_option( 'kolibri24_processing_url' ) ); ?>"
+											/>
+											<p class="description">
+												<?php esc_html_e( 'The URL to process the WP All Import. This URL is called to process the imported data and can be called repeatedly until import is complete.', 'kolibri24-connect' ); ?>
+											</p>
+										</td>
+									</tr>
 								</tbody>
 							</table>
 							
