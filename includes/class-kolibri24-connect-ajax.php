@@ -43,6 +43,9 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		
 		// AJAX handler for downloading archive media.
 		add_action( 'wp_ajax_kolibri24_download_archive_media', array( $this, 'download_archive_media' ) );
+		
+		// AJAX handler for getting selected records.
+		add_action( 'wp_ajax_kolibri24_get_selected_records', array( $this, 'get_selected_records' ) );
 	}
 
 	/**
@@ -176,132 +179,125 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				);
 			}
 	
-			// STEP 3: Extract property previews.
-			$preview_result = $xml_processor->extract_property_previews( $extract_result['xml_files'] );
-	
-			if ( ! $preview_result['success'] ) {
-				wp_send_json_error(
-					array(
-						'message' => $preview_result['message'],
-						'step'    => 'preview',
-					)
-				);
-			}
-	
-			// Success - return preview data.
-			wp_send_json_success(
+		// STEP 3: Merge ALL XML files into properties.xml immediately.
+		$output_path = $xml_processor->get_output_file_path();
+		$merge_result = $xml_processor->merge_selected_properties( $extract_result['xml_files'], $output_path );
+
+		if ( ! $merge_result['success'] ) {
+			wp_send_json_error(
 				array(
-					'message'    => __( 'Properties extracted successfully. Please select properties to merge.', 'kolibri24-connect' ),
-					'properties' => $preview_result['properties'],
-					'total'      => count( $preview_result['properties'] ),
+					'message' => $merge_result['message'],
+					'step'    => 'merge',
 				)
 			);
 		}
 
-		/**
-		 * AJAX handler for merging selected properties
-		 *
-		 * @since 1.0.0
-		 */
-		public function merge_selected_properties() {
-			// Verify nonce.
-			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
-				wp_send_json_error(
-					array(
-						'message' => __( 'Security verification failed. Please refresh the page and try again.', 'kolibri24-connect' ),
-					)
-				);
-			}
+		// STEP 4: Extract property previews from the merged properties.xml file.
+		$preview_result = $xml_processor->extract_property_previews_from_merged( $output_path );
 
-			// Check user capabilities.
-			if ( ! current_user_can( 'manage_options' ) ) {
-				wp_send_json_error(
-					array(
-						'message' => __( 'You do not have sufficient permissions to perform this action.', 'kolibri24-connect' ),
-					)
-				);
-			}
-
-			// Get selected file paths.
-			if ( ! isset( $_POST['selected_files'] ) || empty( $_POST['selected_files'] ) ) {
-				wp_send_json_error(
-					array(
-						'message' => __( 'No properties selected. Please select at least one property to merge.', 'kolibri24-connect' ),
-					)
-				);
-			}
-
-			// Sanitize file paths.
-			$selected_files = array_map( 'sanitize_text_field', wp_unslash( $_POST['selected_files'] ) );
-
-			// Validate file paths (security check).
-			$upload_dir  = wp_upload_dir();
-			$base_path   = trailingslashit( $upload_dir['basedir'] ) . 'kolibri/archived/';
-			$valid_files = array();
-
-			foreach ( $selected_files as $file_path ) {
-				// Ensure file is within our kolibri directory.
-				if ( 0 === strpos( $file_path, $base_path ) && file_exists( $file_path ) ) {
-					$valid_files[] = $file_path;
-				}
-			}
-
-			if ( empty( $valid_files ) ) {
-				wp_send_json_error(
-					array(
-						'message' => __( 'No valid property files found. Please try downloading again.', 'kolibri24-connect' ),
-					)
-				);
-			}
-
-			// Merge the selected properties.
-			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
-			$xml_processor = new Kolibri24_Connect_Xml_Processor();
-			$output_path   = $xml_processor->get_output_file_path();
-
-			$merge_result = $xml_processor->merge_selected_properties( $valid_files, $output_path );
-
-			if ( ! $merge_result['success'] ) {
-				wp_send_json_error(
-					array(
-						'message' => $merge_result['message'],
-						'step'    => 'merge',
-					)
-				);
-			}
-
-			// Persist metadata about the merged properties.xml.
-			if ( isset( $merge_result['success'] ) && $merge_result['success'] ) {
-				$first_dir      = dirname( $valid_files[0] );
-				$archive_name   = basename( $first_dir );
-				$properties_info = array(
-					'total_properties' => (int) ( $merge_result['processed_count'] ?? 0 ),
-					'created_at'       => current_time( 'timestamp' ),
-					'archive_name'     => $archive_name,
-					'archive_path'     => $first_dir,
-					'output_file'      => $output_path,
-				);
-				update_option( 'kolibri24_properties_info', $properties_info, false );
-			}
-
-			// Success response.
-			wp_send_json_success(
+		if ( ! $preview_result['success'] ) {
+			wp_send_json_error(
 				array(
-					'message'     => __( 'Selected properties have been successfully merged!', 'kolibri24-connect' ),
-					'output_file' => $output_path,
-					'processed'   => $merge_result['processed_count'],
+					'message' => $preview_result['message'],
+					'step'    => 'preview',
 				)
 			);
 		}
-		
-		/**
-		 * AJAX handler for getting archived directories
-		 *
-		 * @since 1.0.0
-		 */
-		public function get_archives() {
-			// Verify nonce.
-			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+
+		// Persist metadata about the merged properties.xml.
+		$first_dir      = dirname( $extract_result['xml_files'][0] );
+		$archive_name   = basename( $first_dir );
+		$properties_info = array(
+			'total_properties' => count( $preview_result['properties'] ),
+			'created_at'       => current_time( 'timestamp' ),
+			'archive_name'     => $archive_name,
+			'archive_path'     => $first_dir,
+			'output_file'      => $output_path,
+		);
+		update_option( 'kolibri24_properties_info', $properties_info, false );
+
+		// Success - return preview data with record positions.
+		wp_send_json_success(
+			array(
+				'message'    => __( 'Properties merged successfully. Please select which records to import.', 'kolibri24-connect' ),
+				'properties' => $preview_result['properties'],
+				'total'      => count( $preview_result['properties'] ),
+			)
+		);
+	}
+
+	/**
+	 * AJAX handler for saving selected record positions
+	 *
+	 * @since 1.0.0
+	 */
+	public function merge_selected_properties() {
+		// Verify nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'Security verification failed. Please refresh the page and try again.', 'kolibri24-connect' ),
+				)
+			);
+		}
+
+		// Check user capabilities.
+		if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error(
+			array(
+				'message' => __( 'You do not have sufficient permissions to perform this action.', 'kolibri24-connect' ),
+			)
+		);
+	}
+
+	// Get selected record positions.
+	if ( ! isset( $_POST['selected_records'] ) || empty( $_POST['selected_records'] ) ) {
+		wp_send_json_error(
+			array(
+				'message' => __( 'No records selected. Please select at least one record to import.', 'kolibri24-connect' ),
+			)
+		);
+	}
+
+	// Sanitize and validate record positions (comma-separated integers).
+	$selected_records = sanitize_text_field( wp_unslash( $_POST['selected_records'] ) );
+	
+	// Validate format: should be comma-separated integers.
+	if ( ! preg_match( '/^[0-9,]+$/', $selected_records ) ) {
+		wp_send_json_error(
+			array(
+				'message' => __( 'Invalid record positions format.', 'kolibri24-connect' ),
+			)
+		);
+	}
+
+	// Save the selected record positions.
+	update_option( 'kolibri24_selected_records', $selected_records, false );
+
+	// Count selected records.
+	$record_count = count( explode( ',', $selected_records ) );
+
+	// Success response.
+	wp_send_json_success(
+		array(
+			'message' => sprintf(
+				__( '%d records have been marked for import!', 'kolibri24-connect' ),
+				$record_count
+			),
+			'selected_records' => $selected_records,
+			'record_count'     => $record_count,
+		)
+	);
+}
+
+/**
+ * AJAX handler for getting archived directories
+ *
+ * @since 1.0.0
+ */
+public function get_archives() {
+	// Verify nonce.
+	if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
 				wp_send_json_error(
 					array(
 						'message' => __( 'Security verification failed.', 'kolibri24-connect' ),
@@ -597,6 +593,112 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		);
 	}
 
+
+	/**
+	 * AJAX handler for getting selected records
+	 *
+	 * @since 1.2.0
+	 */
+	public function get_selected_records() {
+		// Verify nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'Security verification failed.', 'kolibri24-connect' ),
+				)
+			);
+		}
+
+		// Check user capabilities.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ),
+				)
+			);
+		}
+
+		// Get the selected record positions.
+		$selected_records = get_option( 'kolibri24_selected_records', '' );
+
+		if ( empty( $selected_records ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'No records have been selected yet. Please complete Step 2 first.', 'kolibri24-connect' ),
+				)
+			);
+		}
+
+		// Parse and count records.
+		$record_array = explode( ',', $selected_records );
+		$record_count = count( $record_array );
+
+		// Get properties info to locate merged file.
+		$properties_info = get_option( 'kolibri24_properties_info', array() );
+		$merged_file_path = isset( $properties_info['output_file'] ) ? $properties_info['output_file'] : '';
+
+		// Initialize address array.
+		$addresses = array();
+
+		// If merged file exists, extract addresses for each selected position.
+		if ( ! empty( $merged_file_path ) && file_exists( $merged_file_path ) ) {
+			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
+			$xml_processor = new Kolibri24_Connect_Xml_Processor();
+
+			// Read the merged XML file.
+			$xml_content = $xml_processor->filesystem->get_contents( $merged_file_path );
+
+			if ( $xml_content ) {
+				// Parse XML.
+				libxml_use_internal_errors( true );
+				$dom = new DOMDocument( '1.0', 'UTF-8' );
+				if ( $dom->loadXML( $xml_content, LIBXML_NOCDATA ) ) {
+					$xpath = new DOMXPath( $dom );
+
+					// Get all RealEstateProperty nodes.
+					$property_nodes = $xpath->query( '//RealEstateProperty' );
+
+					// Extract addresses for each selected position.
+					for ( $i = 0; $i < $property_nodes->length; $i++ ) {
+						$position = $i + 1; // 1-based position.
+
+						// Only process selected positions.
+						if ( ! in_array( (string) $position, $record_array, true ) ) {
+							continue;
+						}
+
+						$property_node = $property_nodes->item( $i );
+
+						// Create a new DOMDocument for this property.
+						$property_dom = new DOMDocument( '1.0', 'UTF-8' );
+						$imported_node = $property_dom->importNode( $property_node, true );
+						$property_dom->appendChild( $imported_node );
+
+						$property_xpath = new DOMXPath( $property_dom );
+
+						// Extract address and city using XPath.
+						$address_nodes = $property_xpath->query( '//Location/Address/AddressLine1/Translation/text()' );
+						$city_nodes    = $property_xpath->query( '//Location/Address/CityName/Translation/text()' );
+
+						$address = ( $address_nodes && $address_nodes->length > 0 ) ? trim( $address_nodes->item( 0 )->nodeValue ) : __( 'N/A', 'kolibri24-connect' );
+						$city    = ( $city_nodes && $city_nodes->length > 0 ) ? trim( $city_nodes->item( 0 )->nodeValue ) : __( 'N/A', 'kolibri24-connect' );
+
+						$addresses[ $position ] = $address . ', ' . $city;
+					}
+				}
+				libxml_clear_errors();
+			}
+		}
+
+		wp_send_json_success(
+			array(
+				'selected_records' => $selected_records,
+				'record_array'     => $record_array,
+				'record_count'     => $record_count,
+				'addresses'        => $addresses,
+			)
+		);
+	}
 
 	/**
 	 * AJAX handler for downloading archive media

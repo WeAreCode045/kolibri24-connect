@@ -271,6 +271,94 @@ if ( ! class_exists( 'Kolibri24_Connect_Xml_Processor' ) ) {
 			return null;
 		}
 
+
+		/**
+		 * Extract property previews from merged properties.xml file
+		 *
+		 * @param string $merged_file_path Path to merged properties.xml file.
+		 * @return array Result array with success status and properties data.
+		 */
+		public function extract_property_previews_from_merged( $merged_file_path ) {
+			if ( ! file_exists( $merged_file_path ) ) {
+				return array(
+					"success" => false,
+					"message" => __( "Merged properties file not found.", "kolibri24-connect" ),
+				);
+			}
+
+			$properties = array();
+
+			// Read the merged XML file.
+			$xml_content = $this->filesystem->get_contents( $merged_file_path );
+			if ( false === $xml_content ) {
+				return array(
+					"success" => false,
+					"message" => __( "Failed to read merged properties file.", "kolibri24-connect" ),
+				);
+			}
+
+			// Parse XML.
+			libxml_use_internal_errors( true );
+			$dom = new DOMDocument( "1.0", "UTF-8" );
+			if ( ! $dom->loadXML( $xml_content, LIBXML_NOCDATA ) ) {
+				libxml_clear_errors();
+				return array(
+					"success" => false,
+					"message" => __( "Failed to parse merged properties XML.", "kolibri24-connect" ),
+				);
+			}
+
+			$xpath = new DOMXPath( $dom );
+
+			// Get all RealEstateProperty nodes.
+			$property_nodes = $xpath->query( "//RealEstateProperty" );
+
+			if ( ! $property_nodes || $property_nodes->length === 0 ) {
+				return array(
+					"success" => false,
+					"message" => __( "No properties found in merged file.", "kolibri24-connect" ),
+				);
+			}
+
+			// Extract preview data for each property with position.
+			for ( $i = 0; $i < $property_nodes->length; $i++ ) {
+				$property_node = $property_nodes->item( $i );
+				
+				// Create a new DOMDocument for this property.
+				$property_dom = new DOMDocument( "1.0", "UTF-8" );
+				$imported_node = $property_dom->importNode( $property_node, true );
+				$property_dom->appendChild( $imported_node );
+				
+				$property_xpath = new DOMXPath( $property_dom );
+				
+				// Extract data using XPath.
+				$property_id = $this->get_xpath_value( $property_xpath, "//PropertyInfo/PublicReferenceNumber/text()" );
+				$address = $this->get_xpath_value( $property_xpath, "//Location/Address/AddressLine1/Translation/text()" );
+				$city = $this->get_xpath_value( $property_xpath, "//Location/Address/CityName/Translation/text()" );
+				
+				// Try purchase price first, then rent price.
+				$price = $this->get_xpath_value( $property_xpath, "//Financials/PurchasePrice/text()" );
+				if ( empty( $price ) ) {
+					$price = $this->get_xpath_value( $property_xpath, "//Financials/RentPrice/text()" );
+				}
+				
+				$image_url = $this->get_xpath_value( $property_xpath, "//Attachments/Attachment/URLThumbFile/text()" );
+				
+				$properties[] = array(
+					"record_position" => $i + 1, // 1-based position
+					"property_id"     => $property_id ? $property_id : __( "N/A", "kolibri24-connect" ),
+					"address"         => $address ? $address : __( "N/A", "kolibri24-connect" ),
+					"city"            => $city ? $city : __( "N/A", "kolibri24-connect" ),
+					"price"           => $price ? $price : __( "N/A", "kolibri24-connect" ),
+					"image_url"       => $image_url ? $image_url : "",
+				);
+			}
+
+			return array(
+				"success"    => true,
+				"properties" => $properties,
+			);
+		}
 		/**
 		 * Merge selected XML files into one
 		 *

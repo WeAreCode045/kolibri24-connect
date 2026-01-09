@@ -38,7 +38,7 @@ final class Kolibri24_Connect {
 	 *
 	 * @var string
 	 */
-	public $version = '1.2.0';
+	public $version = '1.8.0';
 
 	/**
 	 * Class constructor

@@ -6,65 +6,101 @@
 jQuery(function ($) {
     'use strict';
 
-    // Event delegation for new Run All Import button
-    $(document).on('click', '#kolibri24-run-all-import-btn', function(e) {
+    // Event delegation for Run WP All Import button
+    $(document).on('click', '#kolibri24-run-import-btn', function(e) {
         e.preventDefault();
-        Kolibri24PropertyProcessor.runAllImportUrls();
+        
+        var $btn = $(this);
+        var nonce = $btn.data('nonce');
+        var statusDiv = $('#kolibri24-run-import-status');
+        var pollInterval = 2 * 60 * 1000; // 2 minutes
+        var maxPolls = 30; // 1 hour max
+        var pollCount = 0;
+
+        function showMessage(message, type) {
+            var className = 'notice notice-' + type;
+            statusDiv.html('<div class="' + className + '"><p>' + message + '</p></div>');
+        }
+
+        function pollProcessingUrl() {
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'kolibri24_run_all_import_urls',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Check if import is finished
+                        var finished = false;
+                        if (typeof response.data.processing_response === 'string') {
+                            finished = response.data.processing_response.indexOf('import complete') !== -1 || 
+                                      response.data.processing_response.indexOf('finished') !== -1;
+                        }
+                        showMessage(response.data.message, 'success');
+                        if (!finished && pollCount < maxPolls) {
+                            pollCount++;
+                            setTimeout(pollProcessingUrl, pollInterval);
+                        } else if (!finished) {
+                            showMessage('Import polling stopped after 1 hour. Please check import status manually.', 'warning');
+                        } else {
+                            showMessage('Import finished!', 'success');
+                        }
+                    } else {
+                        showMessage(response.data.message || 'Error during import.', 'error');
+                    }
+                },
+                error: function() {
+                    showMessage('AJAX error during import processing.', 'error');
+                }
+            });
+        }
+
+        // First check if records are selected
+        $.ajax({
+            url: kolibri24Ajax.ajaxUrl,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'kolibri24_get_selected_records',
+                nonce: nonce
+            },
+            success: function(response) {
+                if (response.success && response.data.count > 0) {
+                    // Build confirmation message with addresses
+                    var confirmLines = ['Import properties:'];
+                    
+                    // Iterate through record array in order
+                    $.each(response.data.record_array, function(index, position) {
+                        var address = response.data.addresses[position] || 'N/A';
+                        confirmLines.push(position + '. ' + address);
+                    });
+                    
+                    confirmLines.push('\nContinue with import?');
+                    var confirmMsg = confirmLines.join('\n');
+                    
+                    if (confirm(confirmMsg)) {
+                        // Disable button and start polling
+                        $btn.prop('disabled', true);
+                        showMessage('Starting WP All Import...', 'info');
+                        pollProcessingUrl();
+                    }
+                } else {
+                    showMessage('No record positions selected. Please download and select records first.', 'warning');
+                }
+            },
+            error: function() {
+                showMessage('Error checking selected records.', 'error');
+            }
+        });
     });
 
     /**
      * Property Processing Handler
      */
     var Kolibri24PropertyProcessor = {
-                /**
-                 * Trigger WP All Import via trigger/processing URLs
-                 */
-                runAllImportUrls: function() {
-                    var self = this;
-                    var nonce = this.downloadBtn.data('nonce');
-                    var statusDiv = this.statusDiv;
-                    var pollInterval = 2 * 60 * 1000; // 2 minutes
-                    var maxPolls = 30; // 1 hour max
-                    var pollCount = 0;
-
-                    function pollProcessingUrl() {
-                        $.ajax({
-                            url: kolibri24Ajax.ajaxUrl,
-                            type: 'POST',
-                            dataType: 'json',
-                            data: {
-                                action: 'kolibri24_run_all_import_urls',
-                                nonce: nonce
-                            },
-                            success: function(response) {
-                                if (response.success) {
-                                    // Check if import is finished (user may want to parse response.processing_response)
-                                    var finished = false;
-                                    if (typeof response.data.processing_response === 'string') {
-                                        finished = response.data.processing_response.indexOf('import complete') !== -1 || response.data.processing_response.indexOf('finished') !== -1;
-                                    }
-                                    self.showMessage(response.data.message, 'success', statusDiv);
-                                    if (!finished && pollCount < maxPolls) {
-                                        pollCount++;
-                                        setTimeout(pollProcessingUrl, pollInterval);
-                                    } else if (!finished) {
-                                        self.showMessage('Import polling stopped after 1 hour. Please check import status manually.', 'warning', statusDiv);
-                                    } else {
-                                        self.showMessage('Import finished!', 'success', statusDiv);
-                                    }
-                                } else {
-                                    self.showMessage(response.data.message || 'Error during import.', 'error', statusDiv);
-                                }
-                            },
-                            error: function() {
-                                self.showMessage('AJAX error during import processing.', 'error', statusDiv);
-                            }
-                        });
-                    }
-
-                    // Start by calling trigger URL (first AJAX call will trigger and process)
-                    pollProcessingUrl();
-                },
         
         // UI Elements
         downloadBtn: null,
@@ -382,18 +418,18 @@ jQuery(function ($) {
             var html = '';
             
             properties.forEach(function(property) {
-                var imageHtml = property.image ? 
-                    '<img src="' + property.image + '" alt="' + property.address + '" />' :
+                var imageHtml = property.image_url ? 
+                    '<img src="' + property.image_url + '" alt="' + property.address + '" />' :
                     '<div class="kolibri24-no-image"><span class="dashicons dashicons-admin-home"></span></div>';
                 
                 html += '<div class="kolibri24-property-item">';
                 html += '  <div class="kolibri24-property-checkbox-container">';
-                html += '    <input type="checkbox" class="kolibri24-property-checkbox" value="' + property.file_path + '" id="property-' + property.index + '" />';
-                html += '    <label for="property-' + property.index + '"></label>';
+                html += '    <input type="checkbox" class="kolibri24-property-checkbox" data-record="' + property.record_position + '" id="property-' + property.record_position + '" />';
+                html += '    <label for="property-' + property.record_position + '"></label>';
                 html += '  </div>';
                 html += '  <div class="kolibri24-property-image">' + imageHtml + '</div>';
                 html += '  <div class="kolibri24-property-details">';
-                html += '    <h3 class="kolibri24-property-id">ID: ' + property.property_id + '</h3>';
+                html += '    <h3 class="kolibri24-property-id">Position ' + property.record_position + ' - ID: ' + property.property_id + '</h3>';
                 html += '    <p class="kolibri24-property-address"><strong>Address:</strong> ' + property.address + '</p>';
                 html += '    <p class="kolibri24-property-city"><strong>City:</strong> ' + property.city + '</p>';
                 html += '    <p class="kolibri24-property-price"><strong>Price:</strong> ' + property.price + '</p>';
@@ -442,14 +478,14 @@ jQuery(function ($) {
         mergeSelectedProperties: function() {
             var self = this;
             var nonce = this.mergeBtn.data('nonce');
-            var selectedFiles = [];
+            var selectedRecords = [];
             
             $('.kolibri24-property-checkbox:checked').each(function() {
-                selectedFiles.push($(this).val());
+                selectedRecords.push($(this).data('record'));
             });
             
-            if (selectedFiles.length === 0) {
-                this.showMessage('Please select at least one property to merge.', 'error', this.mergeStatusDiv);
+            if (selectedRecords.length === 0) {
+                this.showMessage('Please select at least one property to import.', 'error', this.mergeStatusDiv);
                 return;
             }
 
@@ -467,7 +503,7 @@ jQuery(function ($) {
                 data: {
                     action: 'kolibri24_merge_properties',
                     nonce: nonce,
-                    selected_files: selectedFiles
+                    selected_records: selectedRecords.join(',')
                 },
                 success: function(response) {
                     if (response.success) {
@@ -492,20 +528,18 @@ jQuery(function ($) {
         handleMergeSuccess: function(data) {
             var message = '<strong>' + data.message + '</strong>';
             
-            if (data.processed) {
-                message += '<p><strong>' + data.processed + '</strong> properties merged successfully.</p>';
-            }
-            
-            if (data.output_file) {
-                message += '<p>Output file: <code>' + data.output_file + '</code></p>';
+            if (data.count) {
+                message += '<p><strong>' + data.count + '</strong> record positions saved for import.</p>';
             }
             
             this.showMessage(message, 'success', this.mergeStatusDiv);
             
-            // Optionally reset after success
+            // Scroll to run import section
             setTimeout(function() {
-                // Could reset to step 1 or just clear selections
-            }, 3000);
+                $('html, body').animate({
+                    scrollTop: $('.kolibri24-run-import-section').offset().top - 50
+                }, 500);
+            }, 500);
         },
 
         /**

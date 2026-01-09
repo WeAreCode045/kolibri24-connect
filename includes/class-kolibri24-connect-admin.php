@@ -207,8 +207,8 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 
 					<!-- Step 2: Property Selection (Hidden initially) -->
 					   <div class="card kolibri24-step-2 kolibri24-card-full" style="margin-top: 20px; display:none;">
-						<h2><?php esc_html_e( 'Step 2: Select Properties to Merge', 'kolibri24-connect' ); ?></h2>
-						<p><?php esc_html_e( 'Select the properties you want to merge into the final properties.xml file.', 'kolibri24-connect' ); ?></p>
+						<h2><?php esc_html_e( 'Step 2: Select Records to Import', 'kolibri24-connect' ); ?></h2>
+						<p><?php esc_html_e( 'All properties have been merged. Select the record positions you want to import via WP All Import.', 'kolibri24-connect' ); ?></p>
 						
 						<div class="kolibri24-selection-controls">
 							<label>
@@ -223,7 +223,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 						<div class="kolibri24-merge-actions">
 							<button type="button" id="kolibri24-merge-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>" disabled>
 								<span class="dashicons dashicons-database-import" style="margin-top: 3px;"></span>
-								<?php esc_html_e( 'Merge Selected Properties', 'kolibri24-connect' ); ?>
+								<?php esc_html_e( 'Save Selected Records for Import', 'kolibri24-connect' ); ?>
 							</button>
 							<button type="button" id="kolibri24-cancel-btn" class="button button-secondary">
 								<?php esc_html_e( 'Cancel', 'kolibri24-connect' ); ?>
@@ -399,7 +399,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 		 * @param    string $hook_suffix The current admin page hook suffix.
 		 */
 		public function enqueue_scripts( $hook_suffix ) {
-		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.2.4', true );
+		wp_enqueue_script( 'kolibri24-connect-admin', untrailingslashit( plugins_url( '/', KOLIBRI24_CONNECT_PLUGIN_FILE ) ) . '/assets/js/admin.js', array( 'jquery' ), '1.2.6', true );
 			// Localize script with AJAX data.
 			wp_localize_script(
 				'kolibri24-connect-admin',
