@@ -81,21 +81,36 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Trigger or processing URL not configured.', 'kolibri24-connect' ) ) );
 		}
 
-		// Call trigger URL first
-		$trigger_response = wp_remote_get( $trigger_url, array( 'timeout' => 60 ) );
-		if ( is_wp_error( $trigger_response ) ) {
-			wp_send_json_error( array( 'message' => __( 'Failed to call trigger URL.', 'kolibri24-connect' ), 'error' => $trigger_response->get_error_message() ) );
+		// Prefer wget invocation when available (per request), otherwise fall back to wp_remote_get.
+		$trigger_result = $this->call_url_via_wget( $trigger_url );
+		if ( ! $trigger_result['success'] ) {
+			$trigger_result = $this->call_url_via_http_api( $trigger_url );
 		}
 
-		// Call processing URL once (the JS will repeat every 2 minutes until import is finished)
-		$processing_response = wp_remote_get( $processing_url, array( 'timeout' => 60 ) );
-		if ( is_wp_error( $processing_response ) ) {
-			wp_send_json_error( array( 'message' => __( 'Failed to call processing URL.', 'kolibri24-connect' ), 'error' => $processing_response->get_error_message() ) );
+		if ( ! $trigger_result['success'] ) {
+			wp_send_json_error( array( 'message' => __( 'Failed to call trigger URL.', 'kolibri24-connect' ), 'error' => $trigger_result['error'] ) );
 		}
 
-			$body = wp_remote_retrieve_body( $processing_response );
-			// Optionally, parse $body for completion status if needed
-			wp_send_json_success( array( 'message' => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ), 'processing_response' => $body ) );
+		$processing_result = $this->call_url_via_wget( $processing_url );
+		if ( ! $processing_result['success'] ) {
+			$processing_result = $this->call_url_via_http_api( $processing_url );
+		}
+
+		if ( ! $processing_result['success'] ) {
+			wp_send_json_error( array( 'message' => __( 'Failed to call processing URL.', 'kolibri24-connect' ), 'error' => $processing_result['error'] ) );
+		}
+
+		wp_send_json_success(
+			array(
+				'message'              => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ),
+				'trigger_status'       => $trigger_result['status'],
+				'processing_status'    => $processing_result['status'],
+				'trigger_response'     => $trigger_result['body'],
+				'processing_response'  => $processing_result['body'],
+				'trigger_method'       => $trigger_result['method'],
+				'processing_method'    => $processing_result['method'],
+			)
+		);
 		}
 	
 		/**
@@ -295,6 +310,63 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				'properties' => $preview_result['properties'],
 				'total'      => count( $preview_result['properties'] ),
 			)
+		);
+	}
+
+	/**
+	 * Call a URL using wget if available.
+	 *
+	 * @param string $url Target URL.
+	 * @return array
+	 */
+	private function call_url_via_wget( $url ) {
+		// If shell_exec is disabled or wget missing, bail early.
+		if ( ! function_exists( 'shell_exec' ) ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'shell_exec not available.', 'kolibri24-connect' ),
+			);
+		}
+
+		$cmd = 'wget --quiet -O - ' . escapeshellarg( $url );
+		$output = shell_exec( $cmd );
+
+		if ( null === $output ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'wget execution failed.', 'kolibri24-connect' ),
+			);
+		}
+
+		return array(
+			'success' => true,
+			'method'  => 'wget',
+			'status'  => 200, // Assume success since wget completed without error.
+			'body'    => trim( $output ),
+		);
+	}
+
+	/**
+	 * Call a URL using WordPress HTTP API as fallback.
+	 *
+	 * @param string $url Target URL.
+	 * @return array
+	 */
+	private function call_url_via_http_api( $url ) {
+		$response = wp_remote_get( $url, array( 'timeout' => 60 ) );
+
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'success' => false,
+				'error'   => $response->get_error_message(),
+			);
+		}
+
+		return array(
+			'success' => true,
+			'method'  => 'wp_remote_get',
+			'status'  => wp_remote_retrieve_response_code( $response ),
+			'body'    => wp_remote_retrieve_body( $response ),
 		);
 	}
 

@@ -72,7 +72,13 @@ jQuery(function ($) {
                             finished = response.data.processing_response.indexOf('import complete') !== -1 || 
                                       response.data.processing_response.indexOf('finished') !== -1;
                         }
-                        showMessage(response.data.message, 'success');
+
+                        var detail = '';
+                        if (response.data.trigger_status || response.data.processing_status) {
+                            detail = '<br><small>Trigger (' + (response.data.trigger_method || 'n/a') + '): ' + (response.data.trigger_status || 'n/a') + ', Processing (' + (response.data.processing_method || 'n/a') + '): ' + (response.data.processing_status || 'n/a') + '</small>';
+                        }
+                        showMessage((response.data.message || 'Import call sent.') + detail, 'success');
+
                         if (!finished && pollCount < maxPolls) {
                             pollCount++;
                             setTimeout(pollProcessingUrl, pollInterval);
@@ -82,7 +88,11 @@ jQuery(function ($) {
                             showMessage('Import finished!', 'success');
                         }
                     } else {
-                        showMessage(response.data.message || 'Error during import.', 'error');
+                        var errorMsg = response.data.message || 'Error during import.';
+                        if (response.data.error) {
+                            errorMsg += ' (' + response.data.error + ')';
+                        }
+                        showMessage(errorMsg, 'error');
                     }
                 },
                 error: function() {
