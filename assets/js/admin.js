@@ -785,55 +785,30 @@ jQuery(function ($) {
     var Kolibri24SettingsManager = {
         
         // UI Elements
-        form: null,
         saveBtn: null,
-        statusDiv: null,
-        apiUrlInput: null,
-        
-        /**
-         * Initialize the settings manager
-         */
-        init: function() {
-            this.form = $('#kolibri24-settings-form');
-            this.saveBtn = $('#kolibri24-save-settings-btn');
-            this.statusDiv = $('#kolibri24-settings-status');
-            this.apiUrlInput = $('#kolibri24-api-url');
-            
-            this.bindEvents();
-        },
-        
-        /**
-         * Bind event handlers
-         */
-        bindEvents: function() {
-            var self = this;
-            
-            this.saveBtn.on('click', function(e) {
-                e.preventDefault();
-                self.saveSettings();
-            });
-        },
         
         /**
          * Save settings via AJAX
          */
         saveSettings: function() {
-            var self = this;
-            var apiUrl = this.apiUrlInput.val();
-            var nonce = this.saveBtn.data('nonce');
+            var apiUrl = $('#kolibri24-api-url').val();
+            var nonce = $('#kolibri24-save-settings-btn').data('nonce');
+            var statusDiv = $('#kolibri24-settings-status');
+            
+            console.log('Save settings called', { apiUrl, nonce });
             
             // Clear previous messages
-            this.statusDiv.empty();
+            statusDiv.empty();
             
             // Validate URL
             if (!apiUrl) {
-                this.showError('Please enter a valid URL');
+                statusDiv.html('<div class="notice notice-error is-dismissible"><p>Please enter a valid URL</p></div>');
                 return;
             }
             
             // Show loading state
-            this.saveBtn.prop('disabled', true);
-            this.showLoading('Saving settings...');
+            $('#kolibri24-save-settings-btn').prop('disabled', true);
+            statusDiv.html('<div class="notice notice-info"><p>Saving settings...</p></div>');
             
             // Make AJAX request
             $.ajax({
@@ -845,40 +820,21 @@ jQuery(function ($) {
                     kolibri24_api_url: apiUrl
                 },
                 success: function(response) {
+                    console.log('Settings save response:', response);
                     if (response.success) {
-                        self.showSuccess(response.data.message);
+                        statusDiv.html('<div class="notice notice-success is-dismissible"><p>' + response.data.message + '</p></div>');
                     } else {
-                        self.showError(response.data.message);
+                        statusDiv.html('<div class="notice notice-error is-dismissible"><p>' + response.data.message + '</p></div>');
                     }
                 },
                 error: function(xhr, status, error) {
-                    self.showError('An error occurred while saving settings');
+                    console.log('Settings save error:', { xhr, status, error });
+                    statusDiv.html('<div class="notice notice-error is-dismissible"><p>An error occurred while saving settings</p></div>');
                 },
                 complete: function() {
-                    self.saveBtn.prop('disabled', false);
+                    $('#kolibri24-save-settings-btn').prop('disabled', false);
                 }
             });
-        },
-        
-        /**
-         * Show loading message
-         */
-        showLoading: function(message) {
-            this.statusDiv.html('<div class="notice notice-info"><p>' + message + '</p></div>');
-        },
-        
-        /**
-         * Show success message
-         */
-        showSuccess: function(message) {
-            this.statusDiv.html('<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>');
-        },
-        
-        /**
-         * Show error message
-         */
-        showError: function(message) {
-            this.statusDiv.html('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');
         }
     };
     
@@ -892,7 +848,8 @@ jQuery(function ($) {
         Kolibri24ArchiveManager.init();
     }
     
-    // Initialize settings manager if on settings tab
-    if ($('#kolibri24-settings-form').length > 0) {
-        Kolibri24SettingsManager.init();
-    }
+    // Use event delegation for settings save button - works even if form is hidden initially
+    $(document).on('click', '#kolibri24-save-settings-btn', function(e) {
+        e.preventDefault();
+        Kolibri24SettingsManager.saveSettings();
+    });
