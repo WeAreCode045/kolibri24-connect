@@ -67,10 +67,39 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				wp_raise_memory_limit( 'admin' );
 			}
 
-			// STEP 1: Download ZIP file.
+			// Determine source and get ZIP file path.
+			$source = isset( $_POST['source'] ) ? sanitize_text_field( wp_unslash( $_POST['source'] ) ) : 'kolibri24';
+			
 			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-zip-handler.php';
-			$zip_handler     = new Kolibri24_Connect_Zip_Handler();
-			$download_result = $zip_handler->download_zip();
+			$zip_handler = new Kolibri24_Connect_Zip_Handler();
+			
+			// STEP 1: Download or prepare ZIP file based on source.
+			if ( 'kolibri24' === $source ) {
+				// Download from Kolibri24 API.
+				$download_result = $zip_handler->download_zip();
+			} elseif ( 'remote-url' === $source ) {
+				// Download from remote URL.
+				if ( ! isset( $_POST['remote_url'] ) ) {
+					wp_send_json_error(
+						array(
+							'message' => __( 'Remote URL is required.', 'kolibri24-connect' ),
+							'step'    => 'download',
+						)
+					);
+				}
+				$remote_url      = esc_url( wp_unslash( $_POST['remote_url'] ) );
+				$download_result = $zip_handler->download_from_url( $remote_url );
+			} elseif ( 'upload' === $source ) {
+				// Process uploaded file.
+				$download_result = $zip_handler->handle_file_upload();
+			} else {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Invalid import source.', 'kolibri24-connect' ),
+						'step'    => 'download',
+					)
+				);
+			}
 
 			if ( ! $download_result['success'] ) {
 				wp_send_json_error(

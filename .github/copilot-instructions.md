@@ -53,14 +53,37 @@ wp_send_json_error( array( 'message' => '...', 'step' => 'download' ) );
 - **CSS Classes**: `kolibri24-feature-name` (hyphens)
 - **JS Variables**: `camelCase` for local, `PascalCase` for object singletons
 
-## Two-Step Import Workflow
+## Two-Step Import Workflow with Multiple Sources
 
-The plugin uses a **two-step user interaction** (not single-click automation):
+The plugin uses a **two-step user interaction** (not single-click automation) with **three import source options**:
 
-1. **Step 1** (Download & Extract): User clicks "Download & Extract" → AJAX action `kolibri24_download_extract` → Returns property preview data with checkboxes
+### Import Sources
+1. **Download from Kolibri24**: Download latest data directly from the Kolibri24 API (existing behavior)
+2. **Download from Remote URL**: User provides a custom URL to download a ZIP file
+3. **Upload Local ZIP**: User uploads a ZIP file from their computer
+
+### Two-Step Process
+1. **Step 1** (Select Source & Download & Extract): 
+   - User selects import source (radio buttons: Kolibri24/Remote URL/Upload)
+   - For remote URL: user enters URL in text field
+   - For upload: user selects file via file input
+   - User clicks "Download & Extract" → AJAX action `kolibri24_download_extract` with `source` parameter
+   - Returns property preview data with checkboxes
+
 2. **Step 2** (Merge Selection): User selects properties → Clicks "Merge Selected Properties" → AJAX action `kolibri24_merge_properties` → Merges only selected files
 
 **Never auto-merge after download** - the preview/selection step is intentional UX.
+
+### Implementation Details
+- **AJAX Handler**: `download_and_extract()` method checks `$_POST['source']` and calls appropriate method:
+  - `$zip_handler->download_zip()` for Kolibri24
+  - `$zip_handler->download_from_url($url)` for remote URL
+  - `$zip_handler->handle_file_upload()` for file upload
+- **Zip Handler Methods**:
+  - `download_zip()` - Downloads from Kolibri24 API (existing)
+  - `download_from_url($url)` - Downloads from custom URL with validation
+  - `handle_file_upload()` - Processes uploaded ZIP with error handling
+- **JavaScript**: `Kolibri24PropertyProcessor.handleSourceChange()` shows/hides URL and file input fields based on selection
 
 ## XML Processing Specifics
 

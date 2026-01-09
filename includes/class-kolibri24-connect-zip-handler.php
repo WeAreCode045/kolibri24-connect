@@ -143,6 +143,180 @@ if ( ! class_exists( 'Kolibri24_Connect_Zip_Handler' ) ) {
 		}
 
 		/**
+		 * Download ZIP file from a remote URL
+		 *
+		 * @param string $url Remote URL to download from.
+		 * @return array Array with 'success' (bool) and 'message' (string) and optional 'file_path' (string).
+		 */
+		public function download_from_url( $url ) {
+			// Validate URL.
+			if ( ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+				return array(
+					'success' => false,
+					'message' => __( 'Invalid URL provided.', 'kolibri24-connect' ),
+				);
+			}
+
+			// Create dated directory.
+			$dated_dir = $this->create_dated_directory();
+			if ( is_wp_error( $dated_dir ) ) {
+				return array(
+					'success' => false,
+					'message' => $dated_dir->get_error_message(),
+				);
+			}
+
+			// Set file path for the downloaded ZIP.
+			$file_path = $dated_dir . 'properties.zip';
+
+			// Download the file using wp_remote_get.
+			$response = wp_remote_get(
+				$url,
+				array(
+					'timeout'  => 300, // 5 minutes timeout for large files.
+					'stream'   => true,
+					'filename' => $file_path,
+				)
+			);
+
+			// Check for errors.
+			if ( is_wp_error( $response ) ) {
+				return array(
+					'success' => false,
+					'message' => sprintf(
+						/* translators: %s: error message */
+						__( 'Failed to download ZIP file from URL: %s', 'kolibri24-connect' ),
+						$response->get_error_message()
+					),
+				);
+			}
+
+			// Check HTTP response code.
+			$response_code = wp_remote_retrieve_response_code( $response );
+			if ( 200 !== $response_code ) {
+				return array(
+					'success' => false,
+					'message' => sprintf(
+						/* translators: %d: HTTP response code */
+						__( 'ZIP download failed with HTTP code: %d', 'kolibri24-connect' ),
+						$response_code
+					),
+				);
+			}
+
+			// Validate the downloaded file.
+			$validation = $this->validate_zip( $file_path );
+			if ( is_wp_error( $validation ) ) {
+				// Clean up invalid file.
+				$this->filesystem->delete( $file_path );
+				return array(
+					'success' => false,
+					'message' => $validation->get_error_message(),
+				);
+			}
+
+			return array(
+				'success'   => true,
+				'message'   => __( 'ZIP file downloaded successfully from provided URL.', 'kolibri24-connect' ),
+				'file_path' => $file_path,
+				'dated_dir' => $dated_dir,
+			);
+		}
+
+		/**
+		 * Handle file upload
+		 *
+		 * @return array Array with 'success' (bool) and 'message' (string) and optional 'file_path' (string).
+		 */
+		public function handle_file_upload() {
+			// Check if file was uploaded.
+			if ( ! isset( $_FILES['kolibri24_file'] ) ) {
+				return array(
+					'success' => false,
+					'message' => __( 'No file was uploaded.', 'kolibri24-connect' ),
+				);
+			}
+
+			$uploaded_file = $_FILES['kolibri24_file'];
+
+			// Validate file type.
+			if ( 'application/zip' !== $uploaded_file['type'] && 'application/x-zip-compressed' !== $uploaded_file['type'] ) {
+				return array(
+					'success' => false,
+					'message' => __( 'Only ZIP files are allowed.', 'kolibri24-connect' ),
+				);
+			}
+
+			// Check for upload errors.
+			if ( 0 !== $uploaded_file['error'] ) {
+				$error_message = __( 'File upload failed.', 'kolibri24-connect' );
+				switch ( $uploaded_file['error'] ) {
+					case 1:
+					case 2:
+						$error_message = __( 'File is too large.', 'kolibri24-connect' );
+						break;
+					case 3:
+						$error_message = __( 'File upload was incomplete.', 'kolibri24-connect' );
+						break;
+					case 4:
+						$error_message = __( 'No file was selected.', 'kolibri24-connect' );
+						break;
+					case 6:
+						$error_message = __( 'Missing temporary folder.', 'kolibri24-connect' );
+						break;
+					case 7:
+						$error_message = __( 'Failed to write file to disk.', 'kolibri24-connect' );
+						break;
+					case 8:
+						$error_message = __( 'File upload stopped by extension.', 'kolibri24-connect' );
+						break;
+				}
+				return array(
+					'success' => false,
+					'message' => $error_message,
+				);
+			}
+
+			// Create dated directory.
+			$dated_dir = $this->create_dated_directory();
+			if ( is_wp_error( $dated_dir ) ) {
+				return array(
+					'success' => false,
+					'message' => $dated_dir->get_error_message(),
+				);
+			}
+
+			// Move uploaded file to dated directory.
+			$file_path = $dated_dir . 'properties.zip';
+
+			// Use move_uploaded_file to move the file.
+			if ( ! move_uploaded_file( $uploaded_file['tmp_name'], $file_path ) ) {
+				return array(
+					'success' => false,
+					'message' => __( 'Failed to move uploaded file to storage directory.', 'kolibri24-connect' ),
+				);
+			}
+
+			// Validate the uploaded file.
+			$validation = $this->validate_zip( $file_path );
+			if ( is_wp_error( $validation ) ) {
+				// Clean up invalid file.
+				$this->filesystem->delete( $file_path );
+				return array(
+					'success' => false,
+					'message' => $validation->get_error_message(),
+				);
+			}
+
+			return array(
+				'success'   => true,
+				'message'   => __( 'ZIP file uploaded successfully.', 'kolibri24-connect' ),
+				'file_path' => $file_path,
+				'dated_dir' => $dated_dir,
+			);
+		}
+
+		/**
 		 * Create dated directory for storing downloaded files
 		 *
 		 * Directory structure: /wp-content/uploads/kolibri/archived/DD-MM-YYYY/

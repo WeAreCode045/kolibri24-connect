@@ -34,6 +34,13 @@ final class Kolibri24_Connect {
 	}
 
 	/**
+	 * Plugin version
+	 *
+	 * @var string
+	 */
+	public $version = '1.0.2';
+
+	/**
 	 * Class constructor
 	 */
 	public function __construct() {

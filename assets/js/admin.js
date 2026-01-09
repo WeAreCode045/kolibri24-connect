@@ -56,6 +56,11 @@ jQuery(function ($) {
         bindEvents: function() {
             var self = this;
             
+            // Source selection radio buttons
+            $('input[name="kolibri24-import-source"]').on('change', function() {
+                self.handleSourceChange($(this).val());
+            });
+            
             // Download & Extract button
             this.downloadBtn.on('click', function(e) {
                 e.preventDefault();
@@ -127,6 +132,20 @@ jQuery(function ($) {
         },
 
         /**
+         * Handle source selection change
+         */
+        handleSourceChange: function(source) {
+            $('#kolibri24-remote-url-field').hide();
+            $('#kolibri24-file-upload-field').hide();
+            
+            if (source === 'remote-url') {
+                $('#kolibri24-remote-url-field').show();
+            } else if (source === 'upload') {
+                $('#kolibri24-file-upload-field').show();
+            }
+        },
+
+        /**
          * Disable download button
          */
         disableDownloadButton: function() {
@@ -148,6 +167,22 @@ jQuery(function ($) {
         downloadAndExtract: function() {
             var self = this;
             var nonce = this.downloadBtn.data('nonce');
+            var source = $('input[name="kolibri24-import-source"]:checked').val();
+            
+            // Validate input based on source
+            if (source === 'remote-url') {
+                var remoteUrl = $('#kolibri24-remote-url').val();
+                if (!remoteUrl) {
+                    this.showMessage('Please enter a valid URL', 'error', this.statusDiv);
+                    return;
+                }
+            } else if (source === 'upload') {
+                var fileInput = $('#kolibri24-file-upload')[0];
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    this.showMessage('Please select a ZIP file to upload', 'error', this.statusDiv);
+                    return;
+                }
+            }
 
             // Clear previous messages
             this.statusDiv.empty();
@@ -158,14 +193,23 @@ jQuery(function ($) {
             this.showProgress('Downloading and extracting...');
             this.updateProgress(10);
 
+            // Prepare data
+            var ajaxData = {
+                action: 'kolibri24_download_extract',
+                nonce: nonce,
+                source: source
+            };
+            
+            // For remote URL, add URL parameter
+            if (source === 'remote-url') {
+                ajaxData.remote_url = $('#kolibri24-remote-url').val();
+            }
+
             // Make AJAX request
             $.ajax({
                 url: kolibri24Ajax.ajaxUrl,
                 type: 'POST',
-                data: {
-                    action: 'kolibri24_download_extract',
-                    nonce: nonce
-                },
+                data: ajaxData,
                 beforeSend: function() {
                     self.updateProgress(30);
                 },
@@ -190,6 +234,67 @@ jQuery(function ($) {
                 }
             });
         },
+
+        /**
+         * Download and extract properties (for file upload)
+         */
+        downloadAndExtractFile: function() {
+            var self = this;
+            var nonce = this.downloadBtn.data('nonce');
+            var fileInput = $('#kolibri24-file-upload')[0];
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                this.showMessage('Please select a ZIP file to upload', 'error', this.statusDiv);
+                return;
+            }
+
+            // Clear previous messages
+            this.statusDiv.empty();
+            this.mergeStatusDiv.empty();
+
+            // Disable button and show progress
+            this.disableDownloadButton();
+            this.showProgress('Processing uploaded file...');
+            this.updateProgress(10);
+
+            // Create FormData for file upload
+            var formData = new FormData();
+            formData.append('action', 'kolibri24_download_extract');
+            formData.append('nonce', nonce);
+            formData.append('source', 'upload');
+            formData.append('kolibri24_file', fileInput.files[0]);
+
+            // Make AJAX request with FormData
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: function() {
+                    self.updateProgress(30);
+                },
+                success: function(response) {
+                    self.updateProgress(100);
+                    
+                    if (response.success) {
+                        self.handleDownloadSuccess(response.data);
+                    } else {
+                        self.handleError(response.data, self.statusDiv);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    self.updateProgress(0);
+                    self.handleAjaxError(xhr, status, error, self.statusDiv);
+                },
+                complete: function() {
+                    self.enableDownloadButton();
+                    setTimeout(function() {
+                        self.hideProgress();
+                    }, 1000);
+                }
+            });
+        }
 
         /**
          * Handle successful download/extract

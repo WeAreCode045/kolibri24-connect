@@ -7,6 +7,49 @@
     margin-top: 20px;
 }
 
+/* Source selection styles */
+.kolibri24-source-selection {
+    background: #f9f9f9;
+    padding: 15px;
+    border-left: 4px solid #2271b1;
+    border-radius: 4px;
+}
+
+.kolibri24-source-option {
+    margin-bottom: 20px;
+}
+
+.kolibri24-source-option input[type="radio"] {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.kolibri24-source-option label {
+    display: block;
+    cursor: pointer;
+}
+
+.kolibri24-source-option p {
+    margin: 5px 0 0 0;
+}
+
+#kolibri24-remote-url-field,
+#kolibri24-file-upload-field {
+    background: #fff;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#kolibri24-remote-url {
+    width: 100%;
+    max-width: 400px;
+}
+
+#kolibri24-file-upload {
+    display: block;
+}
+
 /* Progress bar container */
 #kolibri24-progress {
     margin: 20px 0;
