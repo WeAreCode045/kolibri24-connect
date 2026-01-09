@@ -7,6 +7,15 @@
     margin-top: 20px;
 }
 
+/* Card width helpers */
+.kolibri24-card-narrow {
+    max-width: 800px;
+}
+
+.kolibri24-card-full {
+    max-width: 100%;
+}
+
 /* Source selection styles */
 .kolibri24-source-selection {
     background: #f9f9f9;
@@ -15,8 +24,25 @@
     border-radius: 4px;
 }
 
+.kolibri24-source-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+}
+
 .kolibri24-source-option {
-    margin-bottom: 20px;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 14px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.kolibri24-source-option:hover {
+    border-color: #c8c8c8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .kolibri24-source-option input[type="radio"] {
@@ -29,16 +55,41 @@
     cursor: pointer;
 }
 
+.kolibri24-source-option .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    margin-right: 6px;
+    color: #2271b1;
+    vertical-align: text-bottom;
+}
+
 .kolibri24-source-option p {
     margin: 5px 0 0 0;
 }
 
 #kolibri24-remote-url-field,
 #kolibri24-file-upload-field {
-    background: #fff;
+    background: #f9f9f9;
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px dashed #d0d0d0;
     border-radius: 4px;
+    margin-top: 10px;
+}
+
+/* Collapsible transition for fields */
+.kolibri24-collapsible {
+    display: block;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+.kolibri24-collapsible.is-open {
+    max-height: 160px; /* enough for inputs and description */
+    opacity: 1;
 }
 
 #kolibri24-remote-url {
@@ -146,6 +197,10 @@
     font-size: 16px;
     padding: 10px 24px;
     height: auto;
+}
+
+.kolibri24-actions {
+    margin-top: 12px;
 }
 
 #kolibri24-download-btn.disabled,

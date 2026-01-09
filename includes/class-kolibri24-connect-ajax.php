@@ -225,6 +225,20 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				);
 			}
 
+			// Persist metadata about the merged properties.xml.
+			if ( isset( $merge_result['success'] ) && $merge_result['success'] ) {
+				$first_dir      = dirname( $valid_files[0] );
+				$archive_name   = basename( $first_dir );
+				$properties_info = array(
+					'total_properties' => (int) ( $merge_result['processed_count'] ?? 0 ),
+					'created_at'       => current_time( 'timestamp' ),
+					'archive_name'     => $archive_name,
+					'archive_path'     => $first_dir,
+					'output_file'      => $output_path,
+				);
+				update_option( 'kolibri24_properties_info', $properties_info, false );
+			}
+
 			// Success response.
 			wp_send_json_success(
 				array(

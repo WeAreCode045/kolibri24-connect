@@ -135,13 +135,16 @@ jQuery(function ($) {
          * Handle source selection change
          */
         handleSourceChange: function(source) {
-            $('#kolibri24-remote-url-field').hide();
-            $('#kolibri24-file-upload-field').hide();
-            
+            var remoteField = $('#kolibri24-remote-url-field');
+            var uploadField = $('#kolibri24-file-upload-field');
+
+            remoteField.removeClass('is-open');
+            uploadField.removeClass('is-open');
+
             if (source === 'remote-url') {
-                $('#kolibri24-remote-url-field').show();
+                remoteField.addClass('is-open');
             } else if (source === 'upload') {
-                $('#kolibri24-file-upload-field').show();
+                uploadField.addClass('is-open');
             }
         },
 

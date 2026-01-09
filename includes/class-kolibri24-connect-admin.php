@@ -106,52 +106,85 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 			
 			<div class="kolibri24-import-container">
 			<?php if ( 'import' === $active_tab ) : ?>
+				<?php 
+					$props_info = get_option( 'kolibri24_properties_info' );
+				?>
+				<div class="card kolibri24-card-narrow" style="margin-bottom: 20px;">
+					<h2><?php esc_html_e( 'Current Properties File', 'kolibri24-connect' ); ?></h2>
+					<?php if ( is_array( $props_info ) && ! empty( $props_info['output_file'] ) ) : ?>
+						<ul>
+							<li>
+								<strong><?php esc_html_e( 'Number of properties:', 'kolibri24-connect' ); ?></strong>
+								<?php echo esc_html( (string) ( $props_info['total_properties'] ?? 0 ) ); ?>
+							</li>
+							<li>
+								<strong><?php esc_html_e( 'Created:', 'kolibri24-connect' ); ?></strong>
+								<?php 
+									$ts = intval( $props_info['created_at'] ?? 0 );
+									echo esc_html( $ts ? date_i18n( 'Y-m-d H:i', $ts ) : __( 'N/A', 'kolibri24-connect' ) );
+								?>
+							</li>
+							<li>
+								<strong><?php esc_html_e( 'Source archive:', 'kolibri24-connect' ); ?></strong>
+								<?php echo esc_html( $props_info['archive_name'] ?? __( 'Unknown', 'kolibri24-connect' ) ); ?>
+							</li>
+							<li>
+								<strong><?php esc_html_e( 'Output path:', 'kolibri24-connect' ); ?></strong>
+								<?php echo esc_html( $props_info['output_file'] ); ?>
+							</li>
+						</ul>
+					<?php else : ?>
+						<p><?php esc_html_e( 'No merged properties file found yet. Complete Step 1 and Step 2 to generate properties.xml.', 'kolibri24-connect' ); ?></p>
+					<?php endif; ?>
+				</div>
 				<!-- Step 1: Select Import Source & Download & Extract -->
-				<div class="card kolibri24-step-1" style="max-width: 800px;">
+				<div class="card kolibri24-step-1 kolibri24-card-narrow">
 					<h2><?php esc_html_e( 'Step 1: Select Import Source & Extract Properties', 'kolibri24-connect' ); ?></h2>
-									<input type="radio" name="kolibri24-import-source" value="kolibri24" checked />
-									<strong><?php esc_html_e( 'Download from Kolibri24', 'kolibri24-connect' ); ?></strong>
-									<p style="margin-top: 5px; margin-left: 25px; color: #666;">
-										<?php esc_html_e( 'Download the latest property data directly from the Kolibri24 API.', 'kolibri24-connect' ); ?>
-									</p>
-								</label>
-							</div>
-							
-							<div class="kolibri24-source-option">
-								<label>
-									<input type="radio" name="kolibri24-import-source" value="remote-url" />
-									<strong><?php esc_html_e( 'Download from Remote URL', 'kolibri24-connect' ); ?></strong>
-									<p style="margin-top: 5px; margin-left: 25px; color: #666;">
-										<?php esc_html_e( 'Provide a custom URL to download a ZIP file.', 'kolibri24-connect' ); ?>
-									</p>
-								</label>
-								<div id="kolibri24-remote-url-field" style="display: none; margin-left: 25px; margin-top: 10px;">
-									<input type="url" id="kolibri24-remote-url" class="regular-text" placeholder="https://example.com/properties.zip" />
-								</div>
-							</div>
-							
-							<div class="kolibri24-source-option">
-								<label>
-									<input type="radio" name="kolibri24-import-source" value="upload" />
-									<strong><?php esc_html_e( 'Upload Local ZIP File', 'kolibri24-connect' ); ?></strong>
-									<p style="margin-top: 5px; margin-left: 25px; color: #666;">
-										<?php esc_html_e( 'Upload a ZIP file from your computer.', 'kolibri24-connect' ); ?>
-									</p>
-								</label>
-								<div id="kolibri24-file-upload-field" style="display: none; margin-left: 25px; margin-top: 10px;">
-									<input type="file" id="kolibri24-file-upload" accept=".zip" />
-									<p class="description"><?php esc_html_e( 'Maximum file size: 100MB', 'kolibri24-connect' ); ?></p>
-								</div>
+				<div class="kolibri24-source-selection">
+					<div class="kolibri24-source-options">
+						<div class="kolibri24-source-option">
+							<label>
+								<span class="dashicons dashicons-cloud"></span>
+								<input type="radio" name="kolibri24-import-source" value="kolibri24" checked />
+								<strong><?php esc_html_e( 'Download from Kolibri24', 'kolibri24-connect' ); ?></strong>
+							</label>
+							<p class="description"><?php esc_html_e( 'Download the latest property data directly from the Kolibri24 API.', 'kolibri24-connect' ); ?></p>
+						</div>
+
+						<div class="kolibri24-source-option">
+							<label>
+								<span class="dashicons dashicons-admin-links"></span>
+								<input type="radio" name="kolibri24-import-source" value="remote-url" />
+								<strong><?php esc_html_e( 'Download from Remote URL', 'kolibri24-connect' ); ?></strong>
+							</label>
+							<p class="description"><?php esc_html_e( 'Provide a custom URL to download a ZIP file.', 'kolibri24-connect' ); ?></p>
+							<div id="kolibri24-remote-url-field" class="kolibri24-collapsible">
+								<input type="url" id="kolibri24-remote-url" class="regular-text" placeholder="https://example.com/properties.zip" />
 							</div>
 						</div>
-						
-						<!-- Download & Extract Button -->
-						<p>
-							<button type="button" id="kolibri24-download-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>">
-								<span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
-								<?php esc_html_e( 'Download & Extract Properties', 'kolibri24-connect' ); ?>
-							</button>
-						</p>
+
+						<div class="kolibri24-source-option">
+							<label>
+								<span class="dashicons dashicons-upload"></span>
+								<input type="radio" name="kolibri24-import-source" value="upload" />
+								<strong><?php esc_html_e( 'Upload Local ZIP File', 'kolibri24-connect' ); ?></strong>
+							</label>
+							<p class="description"><?php esc_html_e( 'Upload a ZIP file from your computer.', 'kolibri24-connect' ); ?></p>
+							<div id="kolibri24-file-upload-field" class="kolibri24-collapsible">
+								<input type="file" id="kolibri24-file-upload" accept=".zip" />
+								<p class="description"><?php esc_html_e( 'Maximum file size: 100MB', 'kolibri24-connect' ); ?></p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Download & Extract Button -->
+				<div class="kolibri24-actions">
+					<button type="button" id="kolibri24-download-btn" class="button button-primary button-hero" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+						<span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
+						<?php esc_html_e( 'Download & Extract Properties', 'kolibri24-connect' ); ?>
+					</button>
+				</div>
 
 						<div id="kolibri24-status-messages"></div>
 						
