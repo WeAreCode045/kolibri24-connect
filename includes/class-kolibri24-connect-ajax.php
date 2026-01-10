@@ -69,7 +69,46 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		add_action( 'wp_ajax_kolibri24_view_selected_archive', array( $this, 'view_selected_archive' ) );
 	}
 
+	/**
+	 * AJAX handler to trigger WP All Import via wp-load.php
+	 *
+	 * @since 1.2.0
+	 */
+	public function run_all_import_urls() {
+		// Security: Nonce and capability check
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Security verification failed.', 'kolibri24-connect' ) ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ) ) );
+		}
 
+		$import_id = get_option( 'kolibri24_import_id' );
+
+		if ( empty( $import_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Import ID not configured in Settings.', 'kolibri24-connect' ) ) );
+		}
+
+		// Trigger import using wp-load.php approach
+		$result = $this->kolibri24_trigger_wpai_import( intval( $import_id ) );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'Failed to trigger import.', 'kolibri24-connect' ),
+					'error'   => $result->get_error_message(),
+				)
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'message'   => __( 'WP All Import triggered successfully.', 'kolibri24-connect' ),
+				'import_id' => $import_id,
+				'method'    => 'wp-load.php (non-blocking)',
+			)
+		);
+	}
 
 	/**
 	 * Trigger WP All Import using non-blocking wp-load.php approach
