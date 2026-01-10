@@ -22,8 +22,8 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			// AJAX handler for WP All Import trigger/process URLs.
 			add_action( 'wp_ajax_kolibri24_run_all_import_urls', array( $this, 'run_all_import_urls' ) );
 		
-		// AJAX handler for downloading and extracting properties.
-		add_action( 'wp_ajax_kolibri24_download_extract', array( $this, 'download_and_extract' ) );
+		// AJAX handler for checking import processing status.
+		add_action( 'wp_ajax_kolibri24_check_import_status', array( $this, 'check_import_status' ) );
 		
 		// AJAX handler for merging selected properties.
 		add_action( 'wp_ajax_kolibri24_merge_properties', array( $this, 'merge_selected_properties' ) );
@@ -173,24 +173,103 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			return $trigger_response;
 		}
 
-		// Kick off processing (non-blocking)
-		$processing_response = wp_remote_get(
-			$processing_url,
-			array(
-				'timeout'  => 0.01,
-				'blocking' => false,
-			)
-		);
-
-		if ( is_wp_error( $processing_response ) ) {
-			return $processing_response;
-		}
-
+		// Return trigger info without calling processing (polling will handle that)
 		return array(
 			'trigger_url'    => $trigger_url,
 			'processing_url' => $processing_url,
 			'trigger_code'   => wp_remote_retrieve_response_code( $trigger_response ),
 			'trigger_body'   => wp_remote_retrieve_body( $trigger_response ),
+			'import_key'     => $import_key,
+		);
+	}
+
+	/**
+	 * AJAX handler to check import processing status
+	 *
+	 * @since 1.3.0
+	 */
+	public function check_import_status() {
+		// Security: Nonce and capability check
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Security verification failed.', 'kolibri24-connect' ) ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ) ) );
+		}
+
+		$import_id = get_option( 'kolibri24_import_id' );
+
+		if ( empty( $import_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Import ID not configured.', 'kolibri24-connect' ) ) );
+		}
+
+		// Get WP All Import cron key
+		$import_key = '';
+		if ( class_exists( 'PMXI_Plugin' ) ) {
+			$import_key = PMXI_Plugin::getInstance()->getOption( 'cron_job_key' );
+		}
+		if ( empty( $import_key ) ) {
+			$import_key = get_option( 'pmxi_cron_job_key' );
+		}
+		if ( empty( $import_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'WP All Import cron key not found.', 'kolibri24-connect' ) ) );
+		}
+
+		// Build processing URL
+		$processing_url = add_query_arg(
+			array(
+				'import_key' => $import_key,
+				'import_id'  => $import_id,
+				'action'     => 'processing',
+			),
+			site_url( '/wp-load.php' )
+		);
+
+		// Call processing URL
+		$response = wp_remote_get(
+			$processing_url,
+			array(
+				'timeout'  => 30,
+				'blocking' => true,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'Failed to check import status.', 'kolibri24-connect' ),
+					'error'   => $response->get_error_message(),
+				)
+			);
+		}
+
+		$http_code = wp_remote_retrieve_response_code( $response );
+		$body      = wp_remote_retrieve_body( $response );
+
+		// Check if import is finished by looking at response body
+		$is_finished = false;
+		if ( stripos( $body, 'import complete' ) !== false || stripos( $body, 'finished' ) !== false || stripos( $body, 'complete!' ) !== false ) {
+			$is_finished = true;
+		}
+
+		// Also check WP All Import database status
+		if ( ! $is_finished ) {
+			global $wpdb;
+			$table = $wpdb->prefix . 'pmxi_imports';
+			$import = $wpdb->get_row( $wpdb->prepare( "SELECT processing FROM `{$table}` WHERE `id` = %d", $import_id ) );
+			
+			if ( $import && $import->processing == 0 ) {
+				$is_finished = true;
+			}
+		}
+
+		wp_send_json_success(
+			array(
+				'http_code'   => $http_code,
+				'response'    => $body,
+				'is_finished' => $is_finished,
+				'url'         => $processing_url,
+			)
 		);
 	}
 	

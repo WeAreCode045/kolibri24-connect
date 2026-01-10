@@ -78,7 +78,7 @@ jQuery(function ($) {
                     if (confirm(confirmMsg)) {
                         // Disable button and trigger import
                         $btn.prop('disabled', true);
-                        showMessage('Triggering WP All Import (non-blocking)...', 'info');
+                        showMessage('Triggering WP All Import...', 'info');
                         
                         $.ajax({
                             url: kolibri24Ajax.ajaxUrl,
@@ -113,16 +113,72 @@ jQuery(function ($) {
                                             message += '<br><details style="margin-top:6px;"><summary style="cursor:pointer;color:#2271b1;">Show trigger response</summary><pre style="background:#f6f7f7;padding:10px;margin-top:4px;overflow:auto;max-height:200px;font-size:11px;">' + response.data.http.trigger_body + '</pre></details>';
                                         }
                                     }
-                                    message += '<br><strong>The import is now running in the background. Check WP All Import → Manage Imports to monitor progress.</strong>';
-                                    showMessage(message, 'success');
+                                    message += '<br><strong>Processing started. Checking status every 2 minutes...</strong>';
+                                    showMessage(message, 'info');
+                                    
+                                    // Start polling every 2 minutes
+                                    var pollCount = 0;
+                                    var maxPolls = 60; // 2 hours max
+                                    
+                                    function pollImportStatus() {
+                                        pollCount++;
+                                        
+                                        $.ajax({
+                                            url: kolibri24Ajax.ajaxUrl,
+                                            type: 'POST',
+                                            dataType: 'json',
+                                            data: {
+                                                action: 'kolibri24_check_import_status',
+                                                nonce: nonce
+                                            },
+                                            success: function(statusResponse) {
+                                                if (statusResponse.success) {
+                                                    var statusMsg = 'Import in progress... (Poll #' + pollCount + ')';
+                                                    statusMsg += '<br><small>HTTP: ' + statusResponse.data.http_code + '</small>';
+                                                    
+                                                    if (statusResponse.data.response) {
+                                                        statusMsg += '<br><details style="margin-top:6px;"><summary style="cursor:pointer;color:#2271b1;">Show processing response</summary><pre style="background:#f6f7f7;padding:10px;margin-top:4px;overflow:auto;max-height:200px;font-size:11px;">' + statusResponse.data.response + '</pre></details>';
+                                                    }
+                                                    
+                                                    if (statusResponse.data.is_finished) {
+                                                        statusMsg = '<strong>✓ Import complete!</strong><br>' + statusMsg;
+                                                        showMessage(statusMsg, 'success');
+                                                        $btn.prop('disabled', false);
+                                                    } else if (pollCount >= maxPolls) {
+                                                        statusMsg += '<br><strong>⚠ Polling stopped after 2 hours. Check WP All Import manually.</strong>';
+                                                        showMessage(statusMsg, 'warning');
+                                                        $btn.prop('disabled', false);
+                                                    } else {
+                                                        showMessage(statusMsg, 'info');
+                                                        setTimeout(pollImportStatus, 120000); // 2 minutes
+                                                    }
+                                                } else {
+                                                    var errorMsg = 'Error checking import status.';
+                                                    if (statusResponse.data && statusResponse.data.message) {
+                                                        errorMsg = statusResponse.data.message;
+                                                    }
+                                                    showMessage(errorMsg, 'error');
+                                                    $btn.prop('disabled', false);
+                                                }
+                                            },
+                                            error: function() {
+                                                showMessage('AJAX error while checking import status.', 'error');
+                                                $btn.prop('disabled', false);
+                                            }
+                                        });
+                                    }
+                                    
+                                    // Start first poll after 2 minutes
+                                    setTimeout(pollImportStatus, 120000);
+                                    
                                 } else {
                                     var errorMsg = response.data.message || 'Error triggering import.';
                                     if (response.data.error) {
                                         errorMsg += '<br>' + response.data.error;
                                     }
                                     showMessage(errorMsg, 'error');
+                                    $btn.prop('disabled', false);
                                 }
-                                $btn.prop('disabled', false);
                             },
                             error: function() {
                                 showMessage('AJAX error while triggering import.', 'error');
