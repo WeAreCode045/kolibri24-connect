@@ -227,6 +227,12 @@ jQuery(function ($) {
                 self.downloadAndExtract();
             });
             
+            // Load archive for Step 2
+            $(document).on('click', '#kolibri24-step2-load-archive', function(e) {
+                e.preventDefault();
+                self.loadArchiveForSelection();
+            });
+            
             // Merge button
             this.mergeBtn.on('click', function(e) {
                 e.preventDefault();
@@ -333,21 +339,14 @@ jQuery(function ($) {
         handleSourceChange: function(source) {
             var remoteField = $('#kolibri24-remote-url-field');
             var uploadField = $('#kolibri24-file-upload-field');
-            var archiveField = $('#kolibri24-previous-archive-field');
-            var self = this;
 
             remoteField.removeClass('is-open');
             uploadField.removeClass('is-open');
-            archiveField.removeClass('is-open');
 
             if (source === 'remote-url') {
                 remoteField.addClass('is-open');
             } else if (source === 'upload') {
                 uploadField.addClass('is-open');
-            } else if (source === 'previous-archive') {
-                archiveField.addClass('is-open');
-                // Load archives list when previous-archive is selected
-                this.loadPreviousArchives();
             }
         },
 
@@ -421,12 +420,6 @@ jQuery(function ($) {
                     this.showMessage('Please select a ZIP file to upload', 'error', this.statusDiv);
                     return;
                 }
-            } else if (source === 'previous-archive') {
-                var archivePath = $('#kolibri24-previous-archive').val();
-                if (!archivePath) {
-                    this.showMessage('Please select a previous archive', 'error', this.statusDiv);
-                    return;
-                }
             }
 
             // Clear previous messages
@@ -436,12 +429,7 @@ jQuery(function ($) {
             // Disable button and show progress
             this.disableDownloadButton();
             
-            // Different message based on source
-            if (source === 'previous-archive') {
-                this.showProgress('Loading archive...');
-            } else {
-                this.showProgress('Downloading and extracting...');
-            }
+            this.showProgress('Downloading and extracting...');
             this.updateProgress(10);
 
             // Prepare data
@@ -456,11 +444,6 @@ jQuery(function ($) {
                 ajaxData.remote_url = $('#kolibri24-remote-url').val();
             }
             
-            // For previous archive, add archive path
-            if (source === 'previous-archive') {
-                ajaxData.archive_path = $('#kolibri24-previous-archive').val();
-            }
-
             // Make AJAX request
             $.ajax({
                 url: kolibri24Ajax.ajaxUrl,
@@ -557,36 +540,59 @@ jQuery(function ($) {
          */
         handleDownloadSuccess: function(data) {
             this.showMessage(data.message, 'success', this.statusDiv);
-            
-            // Store properties
-            this.properties = data.properties;
 
-            // If using a previous archive, save the selection for Step 3
-            var currentSource = $('input[name="kolibri24-import-source"]').val() || 'kolibri24';
-            if (currentSource === 'previous-archive') {
-                var nonce = this.downloadBtn.data('nonce');
-                var archivePath = $('#kolibri24-previous-archive').val();
-                if (archivePath) {
-                    $.ajax({
-                        url: kolibri24Ajax.ajaxUrl,
-                        type: 'POST',
-                        dataType: 'json',
-                        data: {
-                            action: 'kolibri24_set_selected_archive',
-                            nonce: nonce,
-                            archive_path: archivePath
-                        }
-                    });
-                }
-            }
-            
-            // Render property list
-            this.renderPropertyList(data.properties);
-            
-            // Navigate to Step 2
+            // After step 1 completes, move to step 2 and prompt archive selection
+            var self = this;
             setTimeout(function() {
                 goToStep(2);
-            }, 1000);
+                self.loadArchivesForSelection();
+            }, 800);
+        },
+
+        /**
+         * Load archives list for Step 2 archive selector.
+         */
+        loadArchivesForSelection: function() {
+            var nonce = this.downloadBtn.data('nonce');
+            var select = $('#kolibri24-step2-archive-select');
+            var status = $('#kolibri24-step2-archive-status');
+            if (status.length) {
+                status.html('<span class="description">Loading archives...</span>');
+            }
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'kolibri24_get_archives',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        select.empty();
+                        select.append('<option value="">-- Select an archive --</option>');
+                        if (response.data.archives && response.data.archives.length) {
+                            $.each(response.data.archives, function(_, archive) {
+                                select.append('<option value="' + archive.path + '">' + archive.name + ' (' + archive.count + ' files)</option>');
+                            });
+                            if (status.length) {
+                                status.html('');
+                            }
+                        } else {
+                            if (status.length) {
+                                status.html('<span class="description">No archives found. Complete Step 1 first.</span>');
+                            }
+                        }
+                    } else if (status.length) {
+                        status.html('<span class="description">' + (response.data.message || 'Failed to load archives.') + '</span>');
+                    }
+                },
+                error: function() {
+                    if (status.length) {
+                        status.html('<span class="description">Error loading archives.</span>');
+                    }
+                }
+            });
         },
 
         /**
@@ -675,24 +681,20 @@ jQuery(function ($) {
             var self = this;
             var nonce = this.mergeBtn.data('nonce');
             var selectedRecords = [];
-            
+
             $('.kolibri24-property-checkbox:checked').each(function() {
                 selectedRecords.push($(this).data('record'));
             });
-            
+
             if (selectedRecords.length === 0) {
                 this.showMessage('Please select at least one property to import.', 'error', this.mergeStatusDiv);
                 return;
             }
 
-            // Clear previous messages
             this.mergeStatusDiv.empty();
-
-            // Disable buttons
             this.mergeBtn.prop('disabled', true).addClass('disabled');
             this.mergeBtn.find('.dashicons').removeClass('dashicons-database-import').addClass('dashicons-update spin');
 
-            // Make AJAX request
             $.ajax({
                 url: kolibri24Ajax.ajaxUrl,
                 type: 'POST',
@@ -714,6 +716,66 @@ jQuery(function ($) {
                 complete: function() {
                     self.mergeBtn.prop('disabled', false).removeClass('disabled');
                     self.mergeBtn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-database-import');
+                }
+            });
+        },
+
+        /**
+         * Load archive for Step 2: set selected archive and fetch previews from properties.xml
+         */
+        loadArchiveForSelection: function() {
+            var archivePath = $('#kolibri24-step2-archive-select').val();
+            var nonce = this.downloadBtn.data('nonce');
+            var status = $('#kolibri24-step2-archive-status');
+            var self = this;
+
+            if (!archivePath) {
+                status.html('<span class="description">Please select an archive.</span>');
+                return;
+            }
+
+            status.html('<span class="description">Loading archive...</span>');
+
+            // First, set the selected archive option
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'kolibri24_set_selected_archive',
+                    nonce: nonce,
+                    archive_path: archivePath
+                },
+                success: function(setResp) {
+                    if (!setResp.success) {
+                        status.html('<span class="description">' + (setResp.data.message || 'Failed to set archive.') + '</span>');
+                        return;
+                    }
+                    // Then load preview from properties.xml
+                    $.ajax({
+                        url: kolibri24Ajax.ajaxUrl,
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            action: 'kolibri24_view_selected_archive',
+                            nonce: nonce
+                        },
+                        success: function(resp) {
+                            if (resp.success) {
+                                status.html('<span class="description">Archive loaded.</span>');
+                                self.properties = resp.data.properties || [];
+                                self.renderPropertyList(self.properties);
+                            } else {
+                                status.html('<span class="description">' + (resp.data.message || 'Failed to load archive preview.') + '</span>');
+                            }
+                        },
+                        error: function() {
+                            status.html('<span class="description">Error loading archive preview.</span>');
+                        }
+                    });
+                },
+                error: function() {
+                    status.html('<span class="description">Error setting archive.</span>');
                 }
             });
         },

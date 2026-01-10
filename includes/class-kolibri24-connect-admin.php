@@ -189,21 +189,6 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 									<p class="description"><?php esc_html_e( 'Maximum file size: 100MB', 'kolibri24-connect' ); ?></p>
 								</div>
 							</div>
-
-							<div class="kolibri24-source-option">
-								<label>
-									<span class="dashicons dashicons-archive"></span>
-									<input type="radio" name="kolibri24-import-source-radio" value="previous-archive" />
-									<strong><?php esc_html_e( 'Use Previous Archive', 'kolibri24-connect' ); ?></strong>
-								</label>
-								<p class="description"><?php esc_html_e( 'Load a previously downloaded and archived ZIP file.', 'kolibri24-connect' ); ?></p>
-								<div id="kolibri24-previous-archive-field" class="kolibri24-collapsible">
-									<select id="kolibri24-previous-archive" class="regular-text">
-										<option value=""><?php esc_html_e( '-- Select an archive --', 'kolibri24-connect' ); ?></option>
-									</select>
-									<p class="description" id="kolibri24-archive-info"></p>
-								</div>
-							</div>
 						</div>
 
 						<!-- Source Selector Actions -->
@@ -238,7 +223,18 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 				<!-- Step 2: Property Selection (Hidden initially) -->
 				<div class="card kolibri24-step-2 kolibri24-step-container kolibri24-card-full" style="display:none;">
 					<h2><?php esc_html_e( 'Step 2: Select Records to Import', 'kolibri24-connect' ); ?></h2>
-					<p><?php esc_html_e( 'All properties have been merged. Select the record positions you want to import via WP All Import.', 'kolibri24-connect' ); ?></p>
+					<p><?php esc_html_e( 'Choose an archive created in Step 1. The properties.xml inside that archive will be used to build the preview grid and the dynamic import URL.', 'kolibri24-connect' ); ?></p>
+
+					<div class="kolibri24-archive-select" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+						<label for="kolibri24-step2-archive-select" style="margin-right: 6px;">
+							<strong><?php esc_html_e( 'Select archive:', 'kolibri24-connect' ); ?></strong>
+						</label>
+						<select id="kolibri24-step2-archive-select" class="regular-text" style="min-width: 260px;"></select>
+						<button type="button" id="kolibri24-step2-load-archive" class="button button-secondary" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+							<?php esc_html_e( 'Load Archive', 'kolibri24-connect' ); ?>
+						</button>
+						<span id="kolibri24-step2-archive-status"></span>
+					</div>
 					
 					<div class="kolibri24-selection-controls">
 						<label>
