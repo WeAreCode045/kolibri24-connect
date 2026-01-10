@@ -197,8 +197,13 @@ add_action( 'pmxi_after_xml_import', function( $import_id, $import ) {
 /**
  * Filter to specify which records should be imported from the XML file.
  * This uses the record positions saved by the user in the plugin UI.
+ *
+ * @param string $specified_records Comma-separated list of record positions.
+ * @param int    $import_id         The import ID.
+ * @param array  $root_nodes        Array of root nodes from the XML.
+ * @return string Modified comma-separated list of record positions.
  */
-add_filter( 'wp_all_import_specified_records', function( $specified_records, $import_id, $root_nodes ) {
+function kolibri24_specified_records( $specified_records, $import_id, $root_nodes ) {
     // Get the configured import ID from plugin settings
     $configured_id = get_option( 'kolibri24_import_id' );
     
@@ -214,6 +219,7 @@ add_filter( 'wp_all_import_specified_records', function( $specified_records, $im
     
     // Return original value if not our import or no selections
     return $specified_records;
-}, 10, 3 );
+}
+add_filter( 'wp_all_import_specified_records', 'kolibri24_specified_records', 10, 3 );
 
 
