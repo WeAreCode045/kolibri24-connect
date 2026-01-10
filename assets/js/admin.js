@@ -85,7 +85,7 @@ jQuery(function ($) {
                             type: 'POST',
                             dataType: 'json',
                             data: {
-                                action: 'kolibri24_run_all_import_urls',
+                                action: 'kolibri24_trigger_wpai_import',
                                 nonce: nonce
                             },
                             success: function(response) {
