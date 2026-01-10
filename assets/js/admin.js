@@ -560,6 +560,25 @@ jQuery(function ($) {
             
             // Store properties
             this.properties = data.properties;
+
+            // If using a previous archive, save the selection for Step 3
+            var currentSource = $('input[name="kolibri24-import-source"]').val() || 'kolibri24';
+            if (currentSource === 'previous-archive') {
+                var nonce = this.downloadBtn.data('nonce');
+                var archivePath = $('#kolibri24-previous-archive').val();
+                if (archivePath) {
+                    $.ajax({
+                        url: kolibri24Ajax.ajaxUrl,
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            action: 'kolibri24_set_selected_archive',
+                            nonce: nonce,
+                            archive_path: archivePath
+                        }
+                    });
+                }
+            }
             
             // Render property list
             this.renderPropertyList(data.properties);
@@ -714,7 +733,95 @@ jQuery(function ($) {
             // Auto-navigate to Step 3
             setTimeout(function() {
                 goToStep(3);
+                // Load Step 3 preview from selected archive's properties.xml
+                Kolibri24PropertyProcessor.loadStep3Preview();
             }, 1000);
+        },
+
+        /**
+         * Load Step 3 preview from the selected archive's properties.xml
+         */
+        loadStep3Preview: function() {
+            var nonce = $('#kolibri24-run-import-btn').data('nonce');
+            var container = $('#kolibri24-step-3-property-list');
+            var statusDiv = $('#kolibri24-step-3-status');
+
+            if (statusDiv.length) {
+                statusDiv.html('<div class="notice notice-info"><p>Loading selected archive preview...</p></div>');
+            }
+
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'kolibri24_view_selected_archive',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        if (container.length) {
+                            Kolibri24PropertyProcessor.renderStep3PropertyList(response.data.properties);
+                        }
+                        if (statusDiv.length) {
+                            statusDiv.html('');
+                        }
+                    } else {
+                        if (statusDiv.length) {
+                            statusDiv.html('<div class="notice notice-error"><p>' + (response.data.message || 'Failed to load preview.') + '</p></div>');
+                        }
+                    }
+                },
+                error: function() {
+                    if (statusDiv.length) {
+                        statusDiv.html('<div class="notice notice-error"><p>AJAX error while loading preview.</p></div>');
+                    }
+                }
+            });
+        },
+
+        /**
+         * Render Step 3 property list (read-only preview)
+         */
+        renderStep3PropertyList: function(properties) {
+            var container = $('#kolibri24-step-3-property-list');
+            if (!container.length) { return; }
+
+            var html = '';
+            properties.forEach(function(property) {
+                var imageHtml = property.image_url ? 
+                    '<img src="' + property.image_url + '" alt="' + (property.address || '') + '" />' :
+                    '<div class="kolibri24-no-image"><span class="dashicons dashicons-admin-home"></span></div>';
+
+                var updateNotice = '';
+                var changeDetails = '';
+                if (property.changed_fields && property.changed_fields.length) {
+                    changeDetails = '<ul style="margin: 6px 0 0 16px; padding: 0; color: #666;">';
+                    property.changed_fields.forEach(function(change) {
+                        changeDetails += '<li>' + change.field + ': ' + (change.old || '—') + ' → ' + (change.new || '—') + '</li>';
+                    });
+                    changeDetails += '</ul>';
+                }
+                if (property.is_updated) {
+                    updateNotice = '<div class="notice-warning" style="background: #fff8e5; border-left: 4px solid #ffb900; padding: 8px; margin: 10px 0; border-radius: 2px;">' +
+                        '<p style="margin: 0; color: #666;"><strong>⚠️ ' + property.update_message + '</strong></p>' +
+                        changeDetails +
+                        '</div>';
+                }
+
+                html += '<div class="kolibri24-property-item">';
+                html += '  <div class="kolibri24-property-image">' + imageHtml + '</div>';
+                html += '  <div class="kolibri24-property-details">';
+                html += '    <h3 class="kolibri24-property-id">ID: ' + (property.property_id || '') + '</h3>';
+                html +=      updateNotice;
+                html += '    <p class="kolibri24-property-address"><strong>Address:</strong> ' + (property.address || '') + '</p>';
+                html += '    <p class="kolibri24-property-city"><strong>City:</strong> ' + (property.city || '') + '</p>';
+                html += '    <p class="kolibri24-property-price"><strong>Price:</strong> ' + (property.price || '') + '</p>';
+                html += '  </div>';
+                html += '</div>';
+            });
+
+            container.html(html);
         },
 
         /**
