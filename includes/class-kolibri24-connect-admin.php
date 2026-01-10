@@ -96,11 +96,15 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 					<a href="?page=kolibri24-properties-import&tab=import" class="nav-tab <?php echo 'import' === $active_tab ? 'nav-tab-active' : ''; ?>">
 						<?php esc_html_e( 'Import', 'kolibri24-connect' ); ?>
 					</a>
-				<a href="?page=kolibri24-properties-import&tab=history" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Import History', 'kolibri24-connect' ); ?>
-				</a>
-					<?php esc_html_e( 'Settings', 'kolibri24-connect' ); ?>
-				</a>
+					<a href="?page=kolibri24-properties-import&tab=archive" class="nav-tab <?php echo 'archive' === $active_tab ? 'nav-tab-active' : ''; ?>">
+						<?php esc_html_e( 'Archives', 'kolibri24-connect' ); ?>
+					</a>
+					<a href="?page=kolibri24-properties-import&tab=history" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>">
+						<?php esc_html_e( 'Import History', 'kolibri24-connect' ); ?>
+					</a>
+					<a href="?page=kolibri24-properties-import&tab=settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
+						<?php esc_html_e( 'Settings', 'kolibri24-connect' ); ?>
+					</a>
 			</nav>
 			
 			<div class="kolibri24-import-container">
