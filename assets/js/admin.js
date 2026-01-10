@@ -196,6 +196,13 @@ jQuery(function ($) {
                 $('#kolibri24-source-selector').slideDown(300);
             });
 
+            // Skip Step 1: jump to archive selection
+            $('#kolibri24-skip-step1-btn').on('click', function(e) {
+                e.preventDefault();
+                goToStep(2);
+                self.loadArchivesForSelection();
+            });
+
             // Confirm Source button
             $('#kolibri24-confirm-source-btn').on('click', function(e) {
                 e.preventDefault();
@@ -977,6 +984,13 @@ jQuery(function ($) {
                 var archivePath = $(this).data('archive-path');
                 self.viewArchive(archivePath);
             });
+
+            // Regenerate archive button (from list)
+            $(document).on('click', '.kolibri24-archive-regenerate-btn', function(e) {
+                e.preventDefault();
+                var archivePath = $(this).data('archive-path');
+                self.regenerateArchive(archivePath);
+            });
             
             // Delete archive button (from list)
             $(document).on('click', '.kolibri24-archive-delete-list-btn', function(e) {
@@ -1104,6 +1118,7 @@ jQuery(function ($) {
                 html += '<td>' + archive.count + ' properties</td>';
                 html += '<td>';
                 html += '<button class="button button-small kolibri24-archive-view-btn" data-archive-path="' + archive.path + '">View</button> ';
+                html += '<button class="button button-small kolibri24-archive-regenerate-btn" data-archive-path="' + archive.path + '">Regenerate</button> ';
                 html += '<button class="button button-small button-link-delete kolibri24-archive-delete-list-btn" data-archive-path="' + archive.path + '">Delete</button>';
                 html += '</td>';
                 html += '</tr>';
@@ -1235,6 +1250,41 @@ jQuery(function ($) {
             this.archivePreview.hide();
             this.archiveList.parent().show();
             this.currentArchivePath = null;
+        },
+
+        /**
+         * Regenerate properties.xml for an archive
+         */
+        regenerateArchive: function(archivePath) {
+            var self = this;
+            var nonce = this.archiveDeleteBtn.data('nonce');
+
+            this.showLoading('Regenerating archive...');
+
+            $.ajax({
+                url: kolibri24Ajax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'kolibri24_regenerate_archive',
+                    nonce: nonce,
+                    archive_path: archivePath
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showSuccess((response.data.message || 'Archive regenerated.') + ' (' + (response.data.xml_count || 0) + ' files)');
+                        self.loadArchives();
+                        if (self.currentArchivePath === archivePath) {
+                            self.viewArchive(archivePath);
+                        }
+                    } else {
+                        self.showError(response.data.message || 'Failed to regenerate archive.');
+                    }
+                },
+                error: function() {
+                    self.showError('An error occurred while regenerating archive.');
+                }
+            });
         },
         
         /**

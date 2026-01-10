@@ -33,6 +33,9 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		
 		// AJAX handler for viewing archive preview.
 		add_action( 'wp_ajax_kolibri24_view_archive', array( $this, 'view_archive' ) );
+
+		// AJAX handler for regenerating an archive's properties.xml.
+		add_action( 'wp_ajax_kolibri24_regenerate_archive', array( $this, 'regenerate_archive' ) );
 		
 		// AJAX handler for deleting an archive.
 		add_action( 'wp_ajax_kolibri24_delete_archive', array( $this, 'delete_archive' ) );
@@ -212,14 +215,15 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				);
 			}
 	
-		// STEP 3: Merge ALL XML files into properties.xml immediately.
+		// STEP 3: Merge ALL XML files into properties.xml placed inside the dated archive folder.
 		if ( ! isset( $xml_processor ) ) {
 			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
 			$xml_processor = new Kolibri24_Connect_Xml_Processor();
 		}
 
-		$output_path = $xml_processor->get_output_file_path();
-		$merge_result = $xml_processor->merge_selected_properties( $extract_result['xml_files'], $output_path );
+		$archive_dir = ! empty( $download_result['dated_dir'] ) ? trailingslashit( $download_result['dated_dir'] ) : dirname( $extract_result['xml_files'][0] ) . '/';
+		$output_path_archive = $archive_dir . 'properties.xml';
+		$merge_result       = $xml_processor->merge_selected_properties( $extract_result['xml_files'], $output_path_archive );
 
 		if ( ! $merge_result['success'] ) {
 			wp_send_json_error(
@@ -230,8 +234,18 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			);
 		}
 
-		// STEP 4: Extract property previews from the merged properties.xml file.
-		$preview_result = $xml_processor->extract_property_previews_from_merged( $output_path );
+		// Also copy the merged file to the latest root location for consistency.
+		$root_output_path = $xml_processor->get_output_file_path();
+		$filesystem       = $xml_processor->get_filesystem();
+		if ( $filesystem && $filesystem->exists( $output_path_archive ) ) {
+			$content = $filesystem->get_contents( $output_path_archive );
+			if ( false !== $content ) {
+				$filesystem->put_contents( $root_output_path, $content );
+			}
+		}
+
+		// STEP 4: Extract property previews from the merged properties.xml file in the archive.
+		$preview_result = $xml_processor->extract_property_previews_from_merged( $output_path_archive );
 
 		if ( ! $preview_result['success'] ) {
 			wp_send_json_error(
@@ -254,7 +268,8 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			'created_at'       => current_time( 'timestamp' ),
 			'archive_name'     => $archive_name,
 			'archive_path'     => $first_dir,
-			'output_file'      => $output_path,
+			'output_file'      => $output_path_archive,
+			'latest_copy'      => $root_output_path,
 		);
 		update_option( 'kolibri24_properties_info', $properties_info, false );
 		update_option( 'kolibri24_preview_data', $preview_result['properties'], false );
@@ -548,6 +563,175 @@ public function get_archives() {
 				array(
 					'properties' => $preview_result['properties'],
 					'archive_name' => basename( $archive_path ),
+				)
+			);
+		}
+
+		/**
+		 * AJAX handler to regenerate properties.xml for an archive.
+		 *
+		 * @since 1.13.0
+		 */
+		public function regenerate_archive() {
+			// Verify nonce.
+			if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'kolibri24_process_properties' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Security verification failed.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			// Check user capabilities.
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			if ( ! isset( $_POST['archive_path'] ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Archive path is required.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			set_time_limit( 600 );
+			if ( function_exists( 'wp_raise_memory_limit' ) ) {
+				wp_raise_memory_limit( 'admin' );
+			}
+
+			$archive_path_raw = sanitize_text_field( wp_unslash( $_POST['archive_path'] ) );
+			$archive_path     = realpath( $archive_path_raw );
+
+			$upload_dir   = wp_upload_dir();
+			$base_archive = realpath( $upload_dir['basedir'] . '/kolibri/archived' );
+
+			if ( empty( $archive_path ) || false === $base_archive || 0 !== strpos( $archive_path, $base_archive ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Invalid archive path.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/class-kolibri24-connect-xml-processor.php';
+			$xml_processor = new Kolibri24_Connect_Xml_Processor();
+			$filesystem    = $xml_processor->get_filesystem();
+
+			if ( empty( $filesystem ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Filesystem not initialized.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			if ( ! $filesystem->is_dir( $archive_path ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Archive path is not a directory.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			$zip_path = trailingslashit( $archive_path ) . 'properties.zip';
+			if ( ! $filesystem->exists( $zip_path ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'properties.zip not found in this archive.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			// Clean up existing XML files inside the archive directory.
+			$existing_xml = $xml_processor->get_xml_files_from_directory( $archive_path );
+			if ( ! empty( $existing_xml ) ) {
+				foreach ( $existing_xml as $xml_file ) {
+					$filesystem->delete( $xml_file );
+				}
+			}
+
+			// Extract properties.zip into the same archive directory.
+			$extract_result = $xml_processor->extract_zip( $zip_path, $archive_path );
+			if ( empty( $extract_result['success'] ) ) {
+				wp_send_json_error(
+					array(
+						'message' => $extract_result['message'] ?? __( 'Failed to extract ZIP.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			$xml_files = $extract_result['xml_files'];
+			if ( empty( $xml_files ) ) {
+				$xml_files = $xml_processor->get_xml_files_from_directory( $archive_path );
+			}
+
+			if ( empty( $xml_files ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'No XML files found after extraction.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			$output_archive = trailingslashit( $archive_path ) . 'properties.xml';
+			$merge_result   = $xml_processor->merge_selected_properties( $xml_files, $output_archive );
+
+			if ( empty( $merge_result['success'] ) ) {
+				wp_send_json_error(
+					array(
+						'message' => $merge_result['message'] ?? __( 'Failed to merge XML files.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			// Copy to root output for consistency.
+			$root_output_path = $xml_processor->get_output_file_path();
+			if ( $filesystem->exists( $output_archive ) ) {
+				$content = $filesystem->get_contents( $output_archive );
+				if ( false !== $content ) {
+					$filesystem->put_contents( $root_output_path, $content );
+				}
+			}
+
+			// Extract preview from regenerated properties.xml
+			$preview_result = $xml_processor->extract_property_previews_from_merged( $output_archive );
+			if ( empty( $preview_result['success'] ) ) {
+				wp_send_json_error(
+					array(
+						'message' => $preview_result['message'] ?? __( 'Failed to extract preview from merged file.', 'kolibri24-connect' ),
+					)
+				);
+			}
+
+			$properties_info = array(
+				'total_properties' => count( $preview_result['properties'] ),
+				'created_at'       => current_time( 'timestamp' ),
+				'archive_name'     => basename( $archive_path ),
+				'archive_path'     => $archive_path,
+				'output_file'      => $output_archive,
+				'latest_copy'      => $root_output_path,
+			);
+			update_option( 'kolibri24_properties_info', $properties_info, false );
+			update_option( 'kolibri24_preview_data', $preview_result['properties'], false );
+			update_option(
+				'kolibri24_selected_archive',
+				array(
+					'archive_path'    => $archive_path,
+					'properties_file' => $output_archive,
+				),
+				false
+			);
+
+			wp_send_json_success(
+				array(
+					'message'   => __( 'Archive regenerated successfully.', 'kolibri24-connect' ),
+					'xml_count' => count( $xml_files ),
+					'archive'   => basename( $archive_path ),
 				)
 			);
 		}

@@ -144,10 +144,13 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 					</div>
 
 					<!-- Change Source Button -->
-					<div style="margin-bottom: 20px; text-align: center;">
+					<div style="margin-bottom: 20px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
 						<button type="button" id="kolibri24-change-source-btn" class="button button-secondary">
 							<span class="dashicons dashicons-image-rotate" style="margin-right: 5px;"></span>
 							<?php esc_html_e( 'Change Source', 'kolibri24-connect' ); ?>
+						</button>
+						<button type="button" id="kolibri24-skip-step1-btn" class="button button-link">
+							<?php esc_html_e( 'Use Existing Archive (skip download)', 'kolibri24-connect' ); ?>
 						</button>
 					</div>
 
