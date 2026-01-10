@@ -194,32 +194,19 @@ add_action( 'pmxi_after_xml_import', function( $import_id, $import ) {
     }
 }, 20, 2 );
 
-/**
- * Filter to specify which records should be imported from the XML file.
- * This uses the record positions saved by the user in the plugin UI.
- *
- * @param string $specified_records Comma-separated list of record positions.
- * @param int    $import_id         The import ID.
- * @param array  $root_nodes        Array of root nodes from the XML.
- * @return string Modified comma-separated list of record positions.
- */
-function kolibri24_specified_records( $specified_records, $import_id, $root_nodes ) {
-    // Get the configured import ID from plugin settings
-    $configured_id = get_option( 'kolibri24_import_id' );
-    
-    if ( $configured_id && $import_id == $configured_id ) {
-        // Get the selected record positions from plugin options
-        $selected_records = get_option( 'kolibri24_selected_records', '' );
-        
-        if ( ! empty( $selected_records ) ) {
-            // Return the comma-separated list of record positions (1-based)
-            return $selected_records;
-        }
+function kolibri24_use_selected_records($specified_records, $import_id, $root_nodes) {
+
+    // Optioneel: alleen toepassen op specifieke import
+    // if ($import_id !== 12) return $specified_records;
+
+    $records = get_option('kolibri24_selected_records');
+
+    if (empty($records)) {
+        return $specified_records; // fallback naar WPAI instellingen
     }
-    
-    // Return original value if not our import or no selections
-    return $specified_records;
+
+    // Schoonmaken (veiligheid)
+    $records = preg_replace('/[^0-9,\-]/', '', $records);
+
+    return $records;
 }
-add_filter( 'wp_all_import_specified_records', 'kolibri24_specified_records', 10, 3 );
-
-
