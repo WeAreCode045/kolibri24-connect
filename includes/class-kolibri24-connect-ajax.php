@@ -309,6 +309,13 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 		update_option( 'kolibri24_properties_info', $properties_info, false );
 		update_option( 'kolibri24_preview_data', $preview_result['properties'], false );
 
+		// Also set the selected archive so Step 3 can render from its properties.xml.
+		$selected_archive = array(
+			'archive_path'    => $first_dir,
+			'properties_file' => $output_path,
+		);
+		update_option( 'kolibri24_selected_archive', $selected_archive, false );
+
 		// Success - return preview data with record positions.
 		wp_send_json_success(
 			array(
@@ -917,11 +924,17 @@ public function get_archives() {
 		}
 
 		$selected_archive = get_option( 'kolibri24_selected_archive', array() );
-		if ( ! is_array( $selected_archive ) || empty( $selected_archive['properties_file'] ) ) {
-			wp_send_json_error( array( 'message' => __( 'No selected archive found. Please select an archive first.', 'kolibri24-connect' ) ) );
+		$properties_file  = '';
+		if ( is_array( $selected_archive ) && ! empty( $selected_archive['properties_file'] ) ) {
+			$properties_file = $selected_archive['properties_file'];
+		} else {
+			$properties_info = get_option( 'kolibri24_properties_info', array() );
+			$properties_file = isset( $properties_info['output_file'] ) ? $properties_info['output_file'] : '';
 		}
 
-		$properties_file = $selected_archive['properties_file'];
+		if ( empty( $properties_file ) ) {
+			wp_send_json_error( array( 'message' => __( 'No properties.xml available to preview.', 'kolibri24-connect' ) ) );
+		}
 		if ( ! file_exists( $properties_file ) ) {
 			wp_send_json_error( array( 'message' => __( 'properties.xml not found in selected archive.', 'kolibri24-connect' ) ) );
 		}
