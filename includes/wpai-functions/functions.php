@@ -210,3 +210,4 @@ function kolibri24_use_selected_records($specified_records, $import_id, $root_no
 
     return $records;
 }
+add_filter( 'wp_all_import_specified_records', 'kolibri24_use_selected_records', 10, 3 );

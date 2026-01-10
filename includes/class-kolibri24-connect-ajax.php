@@ -89,7 +89,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Import ID not configured in Settings.', 'kolibri24-connect' ) ) );
 		}
 
-		// Trigger import using wp-load.php approach
+		// Trigger import using wp-load.php approach (trigger then processing)
 		$result = $this->kolibri24_trigger_wpai_import( intval( $import_id ) );
 
 		if ( is_wp_error( $result ) ) {
@@ -105,7 +105,15 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			array(
 				'message'   => __( 'WP All Import triggered successfully.', 'kolibri24-connect' ),
 				'import_id' => $import_id,
-				'method'    => 'wp-load.php (non-blocking)',
+				'method'    => 'wp-load.php (trigger + processing)',
+				'urls'      => array(
+					'trigger'    => isset( $result['trigger_url'] ) ? $result['trigger_url'] : '',
+					'processing' => isset( $result['processing_url'] ) ? $result['processing_url'] : '',
+				),
+				'http'      => array(
+					'trigger_code' => isset( $result['trigger_code'] ) ? $result['trigger_code'] : null,
+					'trigger_body' => isset( $result['trigger_body'] ) ? $result['trigger_body'] : '',
+				),
 			)
 		);
 	}
@@ -119,13 +127,70 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 	 * @since 1.3.0
 	 */
 	private function kolibri24_trigger_wpai_import( $import_id ) {
-		$url = site_url( "/wp-load.php?import_id={$import_id}&action=processing" );
-		return wp_remote_get(
-			$url,
+		// Get WP All Import cron key
+		$import_key = '';
+		if ( class_exists( 'PMXI_Plugin' ) ) {
+			$import_key = PMXI_Plugin::getInstance()->getOption( 'cron_job_key' );
+		}
+		if ( empty( $import_key ) ) {
+			$import_key = get_option( 'pmxi_cron_job_key' );
+		}
+		if ( empty( $import_key ) ) {
+			return new WP_Error( 'missing_import_key', __( 'WP All Import cron key not found. Set it in WP All Import settings.', 'kolibri24-connect' ) );
+		}
+
+		$base_url = site_url( '/wp-load.php' );
+
+		// Build trigger and processing URLs with key
+		$trigger_url = add_query_arg(
+			array(
+				'import_key' => $import_key,
+				'import_id'  => $import_id,
+				'action'     => 'trigger',
+			),
+			$base_url
+		);
+
+		$processing_url = add_query_arg(
+			array(
+				'import_key' => $import_key,
+				'import_id'  => $import_id,
+				'action'     => 'processing',
+			),
+			$base_url
+		);
+
+		// Trigger import (blocking to capture response)
+		$trigger_response = wp_remote_get(
+			$trigger_url,
+			array(
+				'timeout'  => 15,
+				'blocking' => true,
+			)
+		);
+
+		if ( is_wp_error( $trigger_response ) ) {
+			return $trigger_response;
+		}
+
+		// Kick off processing (non-blocking)
+		$processing_response = wp_remote_get(
+			$processing_url,
 			array(
 				'timeout'  => 0.01,
 				'blocking' => false,
 			)
+		);
+
+		if ( is_wp_error( $processing_response ) ) {
+			return $processing_response;
+		}
+
+		return array(
+			'trigger_url'    => $trigger_url,
+			'processing_url' => $processing_url,
+			'trigger_code'   => wp_remote_retrieve_response_code( $trigger_response ),
+			'trigger_body'   => wp_remote_retrieve_body( $trigger_response ),
 		);
 	}
 	

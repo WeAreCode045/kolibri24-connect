@@ -97,6 +97,22 @@ jQuery(function ($) {
                                     if (response.data.method) {
                                         message += '<br><small>Method: ' + response.data.method + '</small>';
                                     }
+                                    if (response.data.urls) {
+                                        if (response.data.urls.trigger) {
+                                            message += '<br><small>Trigger URL: ' + response.data.urls.trigger + '</small>';
+                                        }
+                                        if (response.data.urls.processing) {
+                                            message += '<br><small>Processing URL: ' + response.data.urls.processing + '</small>';
+                                        }
+                                    }
+                                    if (response.data.http) {
+                                        if (response.data.http.trigger_code) {
+                                            message += '<br><small>Trigger HTTP: ' + response.data.http.trigger_code + '</small>';
+                                        }
+                                        if (response.data.http.trigger_body) {
+                                            message += '<br><details style="margin-top:6px;"><summary style="cursor:pointer;color:#2271b1;">Show trigger response</summary><pre style="background:#f6f7f7;padding:10px;margin-top:4px;overflow:auto;max-height:200px;font-size:11px;">' + response.data.http.trigger_body + '</pre></details>';
+                                        }
+                                    }
                                     message += '<br><strong>The import is now running in the background. Check WP All Import → Manage Imports to monitor progress.</strong>';
                                     showMessage(message, 'success');
                                 } else {
