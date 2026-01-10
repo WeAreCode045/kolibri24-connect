@@ -46,71 +46,10 @@ jQuery(function ($) {
         var $btn = $(this);
         var nonce = $btn.data('nonce');
         var statusDiv = $('#kolibri24-run-import-status');
-        var pollInterval = 2 * 60 * 1000; // 2 minutes
-        var maxPolls = 30; // 1 hour max
-        var pollCount = 0;
 
         function showMessage(message, type) {
             var className = 'notice notice-' + type;
             statusDiv.html('<div class="' + className + '"><p>' + message + '</p></div>');
-        }
-
-        function pollProcessingUrl() {
-            $.ajax({
-                url: kolibri24Ajax.ajaxUrl,
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    action: 'kolibri24_run_all_import_urls',
-                    nonce: nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Check if import is finished
-                        var finished = false;
-                        if (typeof response.data.processing_response === 'string') {
-                            finished = response.data.processing_response.indexOf('import complete') !== -1 || 
-                                      response.data.processing_response.indexOf('finished') !== -1;
-                        }
-
-                        var detail = '';
-                        if (response.data.trigger_status || response.data.processing_status) {
-                            detail = '<br><small>Trigger (' + (response.data.trigger_method || 'n/a') + '): ' + (response.data.trigger_status || 'n/a') + ', Processing (' + (response.data.processing_method || 'n/a') + '): ' + (response.data.processing_status || 'n/a') + '</small>';
-                        }
-                        
-                        // Add debug info if available
-                        if (response.data.trigger_url || response.data.import_id) {
-                            detail += '<br><small style="color: #666;">Import ID: ' + (response.data.import_id || 'not set') + '</small>';
-                            if (response.data.trigger_response) {
-                                detail += '<br><details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2271b1;">Show trigger response</summary><pre style="background: #f0f0f1; padding: 10px; margin-top: 5px; overflow: auto; max-height: 200px; font-size: 11px;">' + response.data.trigger_response + '</pre></details>';
-                            }
-                            if (response.data.processing_response) {
-                                detail += '<br><details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2271b1;">Show processing response</summary><pre style="background: #f0f0f1; padding: 10px; margin-top: 5px; overflow: auto; max-height: 200px; font-size: 11px;">' + response.data.processing_response + '</pre></details>';
-                            }
-                        }
-                        
-                        showMessage((response.data.message || 'Import call sent.') + detail, 'success');
-
-                        if (!finished && pollCount < maxPolls) {
-                            pollCount++;
-                            setTimeout(pollProcessingUrl, pollInterval);
-                        } else if (!finished) {
-                            showMessage('Import polling stopped after 1 hour. Please check import status manually.', 'warning');
-                        } else {
-                            showMessage('Import finished!', 'success');
-                        }
-                    } else {
-                        var errorMsg = response.data.message || 'Error during import.';
-                        if (response.data.error) {
-                            errorMsg += ' (' + response.data.error + ')';
-                        }
-                        showMessage(errorMsg, 'error');
-                    }
-                },
-                error: function() {
-                    showMessage('AJAX error during import processing.', 'error');
-                }
-            });
         }
 
         // First check if records are selected
@@ -137,10 +76,43 @@ jQuery(function ($) {
                     var confirmMsg = confirmLines.join('\n');
                     
                     if (confirm(confirmMsg)) {
-                        // Disable button and start polling
+                        // Disable button and trigger import
                         $btn.prop('disabled', true);
-                        showMessage('Starting WP All Import...', 'info');
-                        pollProcessingUrl();
+                        showMessage('Triggering WP All Import (non-blocking)...', 'info');
+                        
+                        $.ajax({
+                            url: kolibri24Ajax.ajaxUrl,
+                            type: 'POST',
+                            dataType: 'json',
+                            data: {
+                                action: 'kolibri24_run_all_import_urls',
+                                nonce: nonce
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    var message = response.data.message || 'Import triggered successfully.';
+                                    if (response.data.import_id) {
+                                        message += '<br><small>Import ID: ' + response.data.import_id + '</small>';
+                                    }
+                                    if (response.data.method) {
+                                        message += '<br><small>Method: ' + response.data.method + '</small>';
+                                    }
+                                    message += '<br><strong>The import is now running in the background. Check WP All Import → Manage Imports to monitor progress.</strong>';
+                                    showMessage(message, 'success');
+                                } else {
+                                    var errorMsg = response.data.message || 'Error triggering import.';
+                                    if (response.data.error) {
+                                        errorMsg += '<br>' + response.data.error;
+                                    }
+                                    showMessage(errorMsg, 'error');
+                                }
+                                $btn.prop('disabled', false);
+                            },
+                            error: function() {
+                                showMessage('AJAX error while triggering import.', 'error');
+                                $btn.prop('disabled', false);
+                            }
+                        });
                     }
                 } else {
                     alert('No record positions selected. Please go back to Step 2 and select records.');

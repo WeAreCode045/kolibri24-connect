@@ -70,7 +70,7 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 	}
 
 	/**
-	 * AJAX handler to trigger WP All Import via trigger and processing URLs.
+	 * AJAX handler to trigger WP All Import via wp-load.php
 	 *
 	 * @since 1.2.0
 	 */
@@ -83,56 +83,51 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 			wp_send_json_error( array( 'message' => __( 'You do not have sufficient permissions.', 'kolibri24-connect' ) ) );
 		}
 
-		$trigger_url    = get_option( 'kolibri24_trigger_url' );
-		$processing_url = get_option( 'kolibri24_processing_url' );
-		$import_id      = get_option( 'kolibri24_import_id' );
+		$import_id = get_option( 'kolibri24_import_id' );
 
-		// If URLs are empty but import ID is set, try to construct standard WP All Import URLs
-		if ( empty( $trigger_url ) && ! empty( $import_id ) ) {
-			$trigger_url = admin_url( 'admin.php?page=pmxi-admin-manage&action=trigger&id=' . intval( $import_id ) );
-		}
-		if ( empty( $processing_url ) && ! empty( $import_id ) ) {
-			$processing_url = admin_url( 'admin.php?page=pmxi-admin-manage&action=processing&id=' . intval( $import_id ) );
+		if ( empty( $import_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Import ID not configured in Settings.', 'kolibri24-connect' ) ) );
 		}
 
-		if ( empty( $trigger_url ) || empty( $processing_url ) ) {
-			wp_send_json_error( array( 'message' => __( 'Trigger/processing URL or Import ID not configured in Settings.', 'kolibri24-connect' ) ) );
-		}
+		// Trigger import using wp-load.php approach
+		$result = $this->kolibri24_trigger_wpai_import( intval( $import_id ) );
 
-		// Prefer wget invocation when available (per request), otherwise fall back to wp_remote_get.
-		$trigger_result = $this->call_url_via_wget( $trigger_url );
-		if ( ! $trigger_result['success'] ) {
-			$trigger_result = $this->call_url_via_http_api( $trigger_url );
-		}
-
-		if ( ! $trigger_result['success'] ) {
-			wp_send_json_error( array( 'message' => __( 'Failed to call trigger URL.', 'kolibri24-connect' ), 'error' => $trigger_result['error'] ) );
-		}
-
-		$processing_result = $this->call_url_via_wget( $processing_url );
-		if ( ! $processing_result['success'] ) {
-			$processing_result = $this->call_url_via_http_api( $processing_url );
-		}
-
-		if ( ! $processing_result['success'] ) {
-			wp_send_json_error( array( 'message' => __( 'Failed to call processing URL.', 'kolibri24-connect' ), 'error' => $processing_result['error'] ) );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'Failed to trigger import.', 'kolibri24-connect' ),
+					'error'   => $result->get_error_message(),
+				)
+			);
 		}
 
 		wp_send_json_success(
 			array(
-				'message'              => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ),
-				'trigger_status'       => $trigger_result['status'],
-				'processing_status'    => $processing_result['status'],
-				'trigger_response'     => substr( $trigger_result['body'], 0, 500 ),
-				'processing_response'  => substr( $processing_result['body'], 0, 500 ),
-				'trigger_method'       => $trigger_result['method'],
-				'processing_method'    => $processing_result['method'],
-				'trigger_url'          => $trigger_url,
-				'processing_url'       => $processing_url,
-				'import_id'            => $import_id,
+				'message'   => __( 'WP All Import triggered successfully.', 'kolibri24-connect' ),
+				'import_id' => $import_id,
+				'method'    => 'wp-load.php (non-blocking)',
 			)
 		);
-		}
+	}
+
+	/**
+	 * Trigger WP All Import using non-blocking wp-load.php approach
+	 *
+	 * @param int $import_id WP All Import ID.
+	 * @return array|WP_Error Response array or WP_Error on failure.
+	 *
+	 * @since 1.3.0
+	 */
+	private function kolibri24_trigger_wpai_import( $import_id ) {
+		$url = site_url( "/wp-load.php?import_id={$import_id}&action=processing" );
+		return wp_remote_get(
+			$url,
+			array(
+				'timeout'  => 0.01,
+				'blocking' => false,
+			)
+		);
+	}
 	
 		/**
 		 * AJAX handler for downloading and extracting ZIP
