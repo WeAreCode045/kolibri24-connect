@@ -483,6 +483,35 @@ if ( ! class_exists( 'Kolibri24_Connect_Admin' ) ) {
 							
 							<div id="kolibri24-settings-status"></div>
 						</form>
+						
+						<!-- Required Theme Functions Notice -->
+						<div style="background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #d63638; padding: 20px; margin-top: 30px; border-radius: 4px;">
+							<h3 style="margin-top: 0;">⚠️ <?php esc_html_e( 'Required: Add Functions to Theme', 'kolibri24-connect' ); ?></h3>
+							<p><?php esc_html_e( 'WP All Import requires custom functions to be in your active theme\'s functions.php file. Add the following code:', 'kolibri24-connect' ); ?></p>
+							
+							<div style="background: #f6f7f7; padding: 15px; border: 1px solid #c3c4c7; border-radius: 4px; margin: 15px 0;">
+								<p style="margin: 0 0 10px 0;"><strong><?php esc_html_e( 'Path:', 'kolibri24-connect' ); ?></strong> <code><?php echo esc_html( get_stylesheet_directory() ); ?>/functions.php</code></p>
+								<button type="button" id="kolibri24-copy-functions-btn" class="button button-secondary" style="margin-bottom: 10px;">
+									<span class="dashicons dashicons-admin-page" style="margin-top: 3px;"></span>
+									<?php esc_html_e( 'Copy Code to Clipboard', 'kolibri24-connect' ); ?>
+								</button>
+								<pre id="kolibri24-functions-code" style="background: #fff; padding: 15px; overflow: auto; max-height: 400px; border: 1px solid #ddd; font-size: 12px; line-height: 1.6;"><code><?php echo esc_html( file_get_contents( KOLIBRI24_CONNECT_ABSPATH . 'includes/wpai-functions/functions.php' ) ); ?></code></pre>
+							</div>
+							
+							<div class="notice notice-warning inline" style="margin: 15px 0;">
+								<p>
+									<strong><?php esc_html_e( 'Important:', 'kolibri24-connect' ); ?></strong>
+									<?php esc_html_e( 'Without these functions in your theme, WP All Import will not be able to locate the properties.xml file or process the import correctly.', 'kolibri24-connect' ); ?>
+								</p>
+							</div>
+							
+							<h4><?php esc_html_e( 'After adding the code:', 'kolibri24-connect' ); ?></h4>
+							<ol>
+								<li><?php esc_html_e( 'Save your theme\'s functions.php file', 'kolibri24-connect' ); ?></li>
+								<li><?php esc_html_e( 'Configure your WP All Import to use the dynamic function wpai_importfile() for the file path', 'kolibri24-connect' ); ?></li>
+								<li><?php esc_html_e( 'Test the import from Step 3', 'kolibri24-connect' ); ?></li>
+							</ol>
+						</div>
 					</div>
 				<?php endif; ?>
 				</div>

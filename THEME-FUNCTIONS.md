@@ -1,4 +1,23 @@
+# Required Theme Functions for WP All Import
+
+⚠️ **IMPORTANT**: WP All Import requires these functions to be in your **active theme's `functions.php`** file.
+
+## Installation Steps
+
+1. Open your theme's `functions.php` file (usually in `wp-content/themes/your-theme/functions.php`)
+2. Copy the code below and paste it at the end of the file
+3. Save the file
+4. Configure WP All Import to use `wpai_importfile()` as the dynamic file path
+
+## Code to Copy
+
+```php
 <?php
+/**
+ * Kolibri24 Connect - Required Functions for WP All Import
+ * These functions must be in the theme's functions.php for WP All Import to access them.
+ */
+
 /**
  * Return the relative path to the current properties.xml in the selected archive.
  * Example: wp-content/uploads/kolibri/archived/09-01-2026_00-01-00/properties.xml
@@ -56,14 +75,21 @@ if ( ! function_exists( 'get_dynamic_import_url' ) ) {
 	}
 }
 
- function price($sell, $rent) {
+/**
+ * Helper function to determine price (purchase or rent)
+ */
+function price($sell, $rent) {
 	if(empty($sell)) {
 		return $rent;
 	} else {
 		return $sell;
 	}
 }
- function is_rent_suffix($element3) {
+
+/**
+ * Helper function to add rent suffix
+ */
+function is_rent_suffix($element3) {
 	if(empty($element3)) {
 		return "";
 	} else {
@@ -71,49 +97,51 @@ if ( ! function_exists( 'get_dynamic_import_url' ) ) {
 	}
 }
 
-
-
-
+/**
+ * Helper function to determine selling type
+ */
 function sellingtype($sell, $sell_price, $rent, $rent_price) {
-if ($sell == "true") {
-  return $sell_price;
- } elseif ($rent == "true") {
-  return $rent_price;
- } else {
-  return "";
- } 
+	if ($sell == "true") {
+		return $sell_price;
+	} elseif ($rent == "true") {
+		return $rent_price;
+	} else {
+		return "";
+	} 
 }
+
+/**
+ * After import hook - Clean up sold properties
+ * Adjust the import ID (currently set to 2) to match your WP All Import configuration
+ */
 function after_xml_import( $import_id, $import ) {
-    // Only run if import ID is 9.
-    if ($import_id == 2) {   
-$args = array(
-		'post_type' => 'property',
-		'posts_per_page' => -1,
-		'tax_query' => array(
-			array(
-				'taxonomy' => 'property-status',
-				'field' => 'slug',
-				'terms' => 'verkocht'
-			),
-		)
-	);
-// Delete the attached images and related sizes keep the featured image
-
-	$posts = get_posts($args);
-	foreach ($posts as $post) {
-
-		$images = get_attached_media('image', $post->ID);
-		foreach ($images as $image) {
-			if ($image->ID !== get_post_thumbnail_id($post->ID)) {
-				wp_delete_attachment($image->ID, true);
+	// Only run if import ID is 2 - CHANGE THIS TO MATCH YOUR IMPORT ID
+	if ($import_id == 2) {   
+		$args = array(
+			'post_type' => 'property',
+			'posts_per_page' => -1,
+			'tax_query' => array(
+				array(
+					'taxonomy' => 'property-status',
+					'field' => 'slug',
+					'terms' => 'verkocht'
+				),
+			)
+		);
+		
+		// Delete the attached images and related sizes, keep the featured image
+		$posts = get_posts($args);
+		foreach ($posts as $post) {
+			$images = get_attached_media('image', $post->ID);
+			foreach ($images as $image) {
+				if ($image->ID !== get_post_thumbnail_id($post->ID)) {
+					wp_delete_attachment($image->ID, true);
+				}
 			}
+			// Delete the postmeta for the images in the Gallery
+			delete_post_meta($post->ID, 'REAL_HOMES_property_images');
 		}
-// Delete the postmeta for the images in the Gallery
-
-		delete_post_meta($post->ID, 'REAL_HOMES_property_images');
-
 	}
- }
 }
 add_action( 'pmxi_after_xml_import', 'after_xml_import', 10, 2 );
 
@@ -215,5 +243,29 @@ add_filter( 'wp_all_import_specified_records', function( $specified_records, $im
     // Return original value if not our import or no selections
     return $specified_records;
 }, 10, 3 );
+```
 
+## WP All Import Configuration
 
+In your WP All Import settings:
+
+1. **File Path/URL**: Use the function `{wpai_importfile()}` (with curly braces)
+2. **Import ID**: Note your import ID and update it in the `after_xml_import` function above (currently set to 2)
+3. **Trigger URL**: Leave empty or use `admin.php?page=pmxi-admin-manage&action=trigger&id=YOUR_IMPORT_ID`
+4. **Processing URL**: Leave empty or use `admin.php?page=pmxi-admin-manage&action=processing&id=YOUR_IMPORT_ID`
+
+## Verification
+
+After adding these functions to your theme:
+
+1. Go to WP All Import → Manage Imports
+2. Check that the file path resolves correctly
+3. Test the import from Kolibri24 Connect → Import → Step 3
+4. Check the debug output for any errors
+
+## Support
+
+If the import still doesn't work:
+- Verify the import ID matches your WP All Import configuration
+- Check that properties.xml exists in the archive folder
+- Review the trigger/processing response in the debug section

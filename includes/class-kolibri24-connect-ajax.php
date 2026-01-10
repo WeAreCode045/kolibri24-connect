@@ -85,9 +85,18 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 
 		$trigger_url    = get_option( 'kolibri24_trigger_url' );
 		$processing_url = get_option( 'kolibri24_processing_url' );
+		$import_id      = get_option( 'kolibri24_import_id' );
+
+		// If URLs are empty but import ID is set, try to construct standard WP All Import URLs
+		if ( empty( $trigger_url ) && ! empty( $import_id ) ) {
+			$trigger_url = admin_url( 'admin.php?page=pmxi-admin-manage&action=trigger&id=' . intval( $import_id ) );
+		}
+		if ( empty( $processing_url ) && ! empty( $import_id ) ) {
+			$processing_url = admin_url( 'admin.php?page=pmxi-admin-manage&action=processing&id=' . intval( $import_id ) );
+		}
 
 		if ( empty( $trigger_url ) || empty( $processing_url ) ) {
-			wp_send_json_error( array( 'message' => __( 'Trigger or processing URL not configured.', 'kolibri24-connect' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Trigger/processing URL or Import ID not configured in Settings.', 'kolibri24-connect' ) ) );
 		}
 
 		// Prefer wget invocation when available (per request), otherwise fall back to wp_remote_get.
@@ -114,10 +123,13 @@ if ( ! class_exists( 'Kolibri24_Connect_Ajax' ) ) {
 				'message'              => __( 'WP All Import triggered and processing started.', 'kolibri24-connect' ),
 				'trigger_status'       => $trigger_result['status'],
 				'processing_status'    => $processing_result['status'],
-				'trigger_response'     => $trigger_result['body'],
-				'processing_response'  => $processing_result['body'],
+				'trigger_response'     => substr( $trigger_result['body'], 0, 500 ),
+				'processing_response'  => substr( $processing_result['body'], 0, 500 ),
 				'trigger_method'       => $trigger_result['method'],
 				'processing_method'    => $processing_result['method'],
+				'trigger_url'          => $trigger_url,
+				'processing_url'       => $processing_url,
+				'import_id'            => $import_id,
 			)
 		);
 		}

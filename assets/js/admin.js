@@ -77,6 +77,18 @@ jQuery(function ($) {
                         if (response.data.trigger_status || response.data.processing_status) {
                             detail = '<br><small>Trigger (' + (response.data.trigger_method || 'n/a') + '): ' + (response.data.trigger_status || 'n/a') + ', Processing (' + (response.data.processing_method || 'n/a') + '): ' + (response.data.processing_status || 'n/a') + '</small>';
                         }
+                        
+                        // Add debug info if available
+                        if (response.data.trigger_url || response.data.import_id) {
+                            detail += '<br><small style="color: #666;">Import ID: ' + (response.data.import_id || 'not set') + '</small>';
+                            if (response.data.trigger_response) {
+                                detail += '<br><details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2271b1;">Show trigger response</summary><pre style="background: #f0f0f1; padding: 10px; margin-top: 5px; overflow: auto; max-height: 200px; font-size: 11px;">' + response.data.trigger_response + '</pre></details>';
+                            }
+                            if (response.data.processing_response) {
+                                detail += '<br><details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2271b1;">Show processing response</summary><pre style="background: #f0f0f1; padding: 10px; margin-top: 5px; overflow: auto; max-height: 200px; font-size: 11px;">' + response.data.processing_response + '</pre></details>';
+                            }
+                        }
+                        
                         showMessage((response.data.message || 'Import call sent.') + detail, 'success');
 
                         if (!finished && pollCount < maxPolls) {
@@ -1399,6 +1411,40 @@ jQuery(function ($) {
     $(document).on('click', '#kolibri24-save-settings-btn', function(e) {
         e.preventDefault();
         Kolibri24SettingsManager.saveSettings();
+    });
+
+    // Copy functions code to clipboard
+    $(document).on('click', '#kolibri24-copy-functions-btn', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var code = $('#kolibri24-functions-code code').text();
+        
+        // Use modern clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(function() {
+                $btn.text('✓ Copied!');
+                setTimeout(function() {
+                    $btn.html('<span class="dashicons dashicons-admin-page" style="margin-top: 3px;"></span> Copy Code to Clipboard');
+                }, 2000);
+            }).catch(function() {
+                alert('Failed to copy. Please select and copy manually.');
+            });
+        } else {
+            // Fallback for older browsers
+            var $temp = $('<textarea>');
+            $('body').append($temp);
+            $temp.val(code).select();
+            try {
+                document.execCommand('copy');
+                $btn.text('✓ Copied!');
+                setTimeout(function() {
+                    $btn.html('<span class="dashicons dashicons-admin-page" style="margin-top: 3px;"></span> Copy Code to Clipboard');
+                }, 2000);
+            } catch(err) {
+                alert('Failed to copy. Please select and copy manually.');
+            }
+            $temp.remove();
+        }
     });
 
     /**

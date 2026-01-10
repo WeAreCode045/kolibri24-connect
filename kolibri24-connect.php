@@ -30,8 +30,12 @@ if ( ! defined( 'KOLIBRI24_CONNECT_ABSPATH' ) ) {
 	define( 'KOLIBRI24_CONNECT_ABSPATH', dirname( __FILE__ ) . '/' );
 }
 
-// Load after-import hook for WP All Import
-require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/kolibri24-after-import-hook.php';
+// Conditionally load WP All Import functions and hooks if plugin is active
+add_action('plugins_loaded', function () {
+	if (defined('PMXI_VERSION')) {
+		require_once KOLIBRI24_CONNECT_ABSPATH . 'includes/wpai-functions/functions.php';
+	}
+});
 
 // Include the main class.
 if ( ! class_exists( 'Kolibri24_Connect' ) ) {
